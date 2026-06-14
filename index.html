@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>بيلد فاينانس</title>
+  <title>Artash</title>
   <meta name="description" content="نظام تتبع مالي وفواتير لشركات المقاولات" />
   <meta name="theme-color" content="#1a1a2e" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="بيلد فاينانس" />
+  <meta name="apple-mobile-web-app-title" content="Artash" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
@@ -141,9 +141,65 @@
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+    /* Login Screen */
+    #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 1.5rem; }
+    #login-screen.hidden { display: none; }
+    .login-box { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 380px; }
+    .login-logo { text-align: center; margin-bottom: 1.5rem; }
+    .login-logo div:first-child { font-size: 28px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+    .login-logo div:last-child { font-size: 13px; color: var(--text3); }
+    .login-form { display: flex; flex-direction: column; gap: 14px; }
+    .login-error { background: var(--red-bg); border: 1px solid rgba(232,85,85,0.3); color: var(--red); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; display: none; }
+    .login-error.show { display: block; }
+    .btn-login { width: 100%; padding: 12px; font-size: 15px; font-weight: 700; background: var(--accent); border: none; border-radius: var(--radius-sm); color: #1a1a2e; cursor: pointer; font-family: 'Cairo', sans-serif; margin-top: 4px; }
+    .btn-login:hover { background: var(--accent2); }
+    .login-loading { text-align: center; color: var(--text3); font-size: 13px; display: none; }
+    .login-loading.show { display: block; }
+
+    /* User bar */
+    .user-bar { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
+    .user-name { color: var(--accent); font-weight: 600; }
+    .btn-logout { padding: 4px 10px; font-size: 11px; border: 1px solid var(--border2); border-radius: 20px; background: transparent; color: var(--text2); cursor: pointer; font-family: 'Cairo', sans-serif; }
+    .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+    /* Search bar */
+    .search-wrap { position: relative; flex: 1; min-width: 160px; }
+    .search-wrap svg { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text3); pointer-events: none; }
+    .search-input { padding-right: 38px; }
+    .toolbar-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
+    .btn-pdf { background: var(--blue-bg); border-color: rgba(91,141,238,0.3); color: var(--blue); }
+    .btn-pdf:hover { background: var(--blue); border-color: var(--blue); color: #fff; }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div>Artash</div>
+      <div>نظام إدارة مالية المقاولات</div>
+    </div>
+    <div class="login-form">
+      <div class="login-error" id="login-error"></div>
+      <div class="form-group">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="login-email" placeholder="example@email.com" dir="ltr" style="text-align:left" />
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="login-password" placeholder="••••••••" dir="ltr" />
+      </div>
+      <div class="login-loading" id="login-loading">جارٍ تسجيل الدخول…</div>
+      <button class="btn-login" onclick="doLogin()">تسجيل الدخول</button>
+    </div>
+  </div>
+</div>
+
 <div id="app">
   <header>
     <div class="logo">
@@ -151,11 +207,15 @@
         <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
         <polyline points="9 22 9 12 15 12 15 22"/>
       </svg>
-      بيلد فاينانس
+      Artash
     </div>
     <div class="sync-badge" id="sync-status">
       <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg>
       محفوظ
+    </div>
+    <div class="user-bar">
+      <span class="user-name" id="user-display"></span>
+      <button class="btn-logout" onclick="doLogout()">خروج</button>
     </div>
   </header>
 
@@ -209,7 +269,13 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-header"><span class="card-title">آخر النشاطات</span></div>
+        <div class="card-header">
+          <span class="card-title">آخر النشاطات</span>
+          <button class="btn btn-pdf btn-sm" onclick="exportSummaryPDF()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            تقرير مالي PDF
+          </button>
+        </div>
         <div id="recent-list"></div>
       </div>
     </div>
@@ -222,6 +288,16 @@
           <button class="btn btn-accent" onclick="openModal('invoice')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             فاتورة جديدة
+          </button>
+        </div>
+        <div class="toolbar-row">
+          <div class="search-wrap">
+            <input type="text" class="search-input" id="inv-search" placeholder="بحث برقم الفاتورة أو اسم العميل…" oninput="renderInvoices()" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <button class="btn btn-pdf" onclick="exportInvoicesPDF()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            تصدير القائمة PDF
           </button>
         </div>
         <div class="table-wrap">
@@ -243,6 +319,16 @@
             إضافة مصروف
           </button>
         </div>
+        <div class="toolbar-row">
+          <div class="search-wrap">
+            <input type="text" class="search-input" id="exp-search" placeholder="بحث بالوصف أو الفئة أو المشروع…" oninput="renderExpenses()" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <button class="btn btn-pdf" onclick="exportExpensesPDF()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            تصدير القائمة PDF
+          </button>
+        </div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>التاريخ</th><th>الوصف</th><th>الفئة</th><th>المشروع</th><th>المبلغ</th><th></th></tr></thead>
@@ -261,6 +347,12 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             مشروع جديد
           </button>
+        </div>
+        <div class="toolbar-row">
+          <div class="search-wrap">
+            <input type="text" class="search-input" id="prj-search" placeholder="بحث باسم المشروع أو العميل…" oninput="renderProjects()" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
         </div>
         <div id="project-list"></div>
       </div>
@@ -344,6 +436,80 @@
 </div>
 
 <script>
+  // ===== Firebase Setup =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyBraxBQLalnTV15rGIsy9SQuHVs2jcxSiQ",
+    authDomain: "artash-c6ae8.firebaseapp.com",
+    projectId: "artash-c6ae8",
+    storageBucket: "artash-c6ae8.firebasestorage.app",
+    messagingSenderId: "171141253063",
+    appId: "1:171141253063:web:ed007615f38b669371bbe2"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  db.enablePersistence().catch(() => {});
+
+  const COMPANY_DOC = db.collection('company').doc('main');
+  let unsubscribeSync = null;
+
+  let currentUser = null;
+  let currentUserName = '';
+
+  // Auth state listener
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      currentUser = user;
+      // Get user display name from Firestore users collection
+      try {
+        const doc = await db.collection('users').doc(user.uid).get();
+        currentUserName = doc.exists ? doc.data().name : user.email;
+      } catch(e) {
+        currentUserName = user.email;
+      }
+      document.getElementById('user-display').textContent = currentUserName;
+      document.getElementById('login-screen').classList.add('hidden');
+      setupSync();
+    } else {
+      currentUser = null;
+      if (unsubscribeSync) { unsubscribeSync(); unsubscribeSync = null; }
+      document.getElementById('login-screen').classList.remove('hidden');
+    }
+  });
+
+  async function doLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error');
+    const loadEl = document.getElementById('login-loading');
+    errEl.classList.remove('show');
+    if (!email || !password) { errEl.textContent = 'يرجى إدخال البريد الإلكتروني وكلمة المرور.'; errEl.classList.add('show'); return; }
+    loadEl.classList.add('show');
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+    } catch(e) {
+      loadEl.classList.remove('show');
+      const msgs = {
+        'auth/user-not-found': 'البريد الإلكتروني غير موجود.',
+        'auth/wrong-password': 'كلمة المرور غير صحيحة.',
+        'auth/invalid-email': 'البريد الإلكتروني غير صالح.',
+        'auth/too-many-requests': 'تم تجاوز عدد المحاولات، حاول لاحقاً.',
+        'auth/invalid-credential': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+      };
+      errEl.textContent = msgs[e.code] || 'حدث خطأ، حاول مرة أخرى.';
+      errEl.classList.add('show');
+    }
+  }
+
+  function doLogout() {
+    if (confirm('هل تريد تسجيل الخروج؟')) auth.signOut();
+  }
+
+  // Allow login on Enter key
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !document.getElementById('login-screen').classList.contains('hidden')) doLogin();
+  });
+
   let state = { invoices: [], expenses: [], projects: [] };
   let deferredPrompt = null;
 
@@ -383,18 +549,36 @@
   }
   function closeModal(type) { document.getElementById('modal-' + type).classList.remove('open'); }
 
-  function loadData() {
-    try {
-      const saved = localStorage.getItem('buildfinance_data_ar');
-      if (saved) state = JSON.parse(saved);
-    } catch(e) {}
-    renderAll();
+  function setupSync() {
+    if (unsubscribeSync) unsubscribeSync();
+    unsubscribeSync = COMPANY_DOC.onSnapshot(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        state = {
+          invoices: data.invoices || [],
+          expenses: data.expenses || [],
+          projects: data.projects || []
+        };
+      } else {
+        state = { invoices: [], expenses: [], projects: [] };
+        // initialize the document
+        COMPANY_DOC.set(state).catch(() => {});
+      }
+      renderAll();
+      setSyncing(false);
+    }, err => {
+      console.error('Sync error:', err);
+    });
   }
 
-  function persist() {
+  async function persist() {
     setSyncing(true);
-    try { localStorage.setItem('buildfinance_data_ar', JSON.stringify(state)); } catch(e) {}
-    setTimeout(() => setSyncing(false), 600);
+    try {
+      await COMPANY_DOC.set(state);
+    } catch(e) {
+      console.error('Save error:', e);
+    }
+    setSyncing(false);
   }
 
   function setSyncing(s) {
@@ -447,11 +631,14 @@
 
   function renderInvoices() {
     const tb = document.getElementById('invoice-table');
-    if (!state.invoices.length) {
-      tb.innerHTML = `<tr><td colspan="6"><div class="empty-state">لا توجد فواتير بعد.</div></td></tr>`;
+    const q = (document.getElementById('inv-search')?.value || '').trim().toLowerCase();
+    let list = state.invoices.slice().reverse();
+    if (q) list = list.filter(i => (i.num + ' ' + i.client + ' ' + (i.project||'')).toLowerCase().includes(q));
+    if (!list.length) {
+      tb.innerHTML = `<tr><td colspan="6"><div class="empty-state">${q ? 'لا توجد نتائج مطابقة.' : 'لا توجد فواتير بعد.'}</div></td></tr>`;
       return;
     }
-    tb.innerHTML = state.invoices.slice().reverse().map(i => {
+    tb.innerHTML = list.map(i => {
       const st = invoiceStatus(i);
       return `<tr>
         <td style="font-weight:700;color:var(--accent)">${i.num}</td>
@@ -460,6 +647,7 @@
         <td style="color:var(--text2)">${fmtDate(i.due)}</td>
         <td><span class="badge badge-${st.key}">${st.label}</span></td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+          <button class="btn btn-sm btn-pdf" onclick="exportSingleInvoicePDF('${i.id}')">PDF</button>
           ${!i.paid ? `<button class="btn btn-sm btn-success" onclick="markPaid('${i.id}')">✓ مدفوعة</button>` : ''}
           <button class="btn btn-sm btn-danger" onclick="deleteItem('invoices','${i.id}')">حذف</button>
         </td>
@@ -469,11 +657,14 @@
 
   function renderExpenses() {
     const tb = document.getElementById('expense-table');
-    if (!state.expenses.length) {
-      tb.innerHTML = `<tr><td colspan="6"><div class="empty-state">لا توجد مصروفات بعد.</div></td></tr>`;
+    const q = (document.getElementById('exp-search')?.value || '').trim().toLowerCase();
+    let list = state.expenses.slice().reverse();
+    if (q) list = list.filter(e => (e.desc + ' ' + e.category + ' ' + (e.project||'')).toLowerCase().includes(q));
+    if (!list.length) {
+      tb.innerHTML = `<tr><td colspan="6"><div class="empty-state">${q ? 'لا توجد نتائج مطابقة.' : 'لا توجد مصروفات بعد.'}</div></td></tr>`;
       return;
     }
-    tb.innerHTML = state.expenses.slice().reverse().map(e => `
+    tb.innerHTML = list.map(e => `
       <tr>
         <td style="color:var(--text2)">${fmtDate(e.date)}</td>
         <td>${e.desc}</td>
@@ -487,12 +678,15 @@
 
   function renderProjects() {
     const el = document.getElementById('project-list');
-    if (!state.projects.length) {
-      el.innerHTML = `<div class="empty-state">لا توجد مشاريع بعد.</div>`;
+    const q = (document.getElementById('prj-search')?.value || '').trim().toLowerCase();
+    let list = state.projects.slice().reverse();
+    if (q) list = list.filter(p => (p.name + ' ' + (p.client||'')).toLowerCase().includes(q));
+    if (!list.length) {
+      el.innerHTML = `<div class="empty-state">${q ? 'لا توجد نتائج مطابقة.' : 'لا توجد مشاريع بعد.'}</div>`;
       return;
     }
     const stMap = { 'نشط': 'badge-active', 'مكتمل': 'badge-completed', 'متوقف': 'badge-hold' };
-    el.innerHTML = state.projects.slice().reverse().map(p => {
+    el.innerHTML = list.map(p => {
       const pinv = state.invoices.filter(i => i.project === p.name).reduce((s, i) => s + Number(i.amount), 0);
       const pexp = state.expenses.filter(e => e.project === p.name).reduce((s, e) => s + Number(e.amount), 0);
       const pct = p.budget > 0 ? Math.min(100, Math.round(pexp / p.budget * 100)) : 0;
@@ -522,6 +716,235 @@
 
   function renderAll() { renderDashboard(); renderInvoices(); renderExpenses(); renderProjects(); }
 
+  // ===== PDF Export Functions (Arabic via HTML render) =====
+
+  function pdfWrapStart(title) {
+    return `
+    <div style="direction:rtl;text-align:right;font-family:'Cairo',sans-serif;width:760px;background:#fff;color:#1a1a2e;padding:0;">
+      <div style="background:#1a1a2e;padding:20px;text-align:center;">
+        <div style="color:#e8b84b;font-size:26px;font-weight:700;margin-bottom:4px;">Artash</div>
+        <div style="color:#fff;font-size:16px;">${title}</div>
+      </div>
+      <div style="padding:28px;">
+    `;
+  }
+
+  function pdfWrapEnd() {
+    const now = new Date();
+    return `
+      </div>
+      <div style="text-align:center;color:#999;font-size:11px;padding:10px 0 20px;">
+        تم الإنشاء: ${fmtDate(now.toISOString().split('T')[0])} — ${now.toLocaleTimeString('ar-EG')}
+      </div>
+    </div>`;
+  }
+
+  async function renderHtmlToPdf(html, filename) {
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.top = '0';
+    container.style.left = '-9999px';
+    container.style.zIndex = '-1';
+    container.innerHTML = html;
+    document.body.appendChild(container);
+
+    try {
+      const target = container.firstElementChild;
+      const canvas = await html2canvas(target, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(filename);
+    } finally {
+      document.body.removeChild(container);
+    }
+  }
+
+  function rowHtml(label, value, extra='') {
+    return `
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;">
+        <div style="font-weight:700;color:#555;">${label}</div>
+        <div style="font-weight:600;">${value}${extra}</div>
+      </div>`;
+  }
+
+  async function exportSingleInvoicePDF(id) {
+    const inv = state.invoices.find(i => i.id === id);
+    if (!inv) return;
+    const st = invoiceStatus(inv);
+    const stColors = { paid: '#2ecc8a', pending: '#e8b84b', overdue: '#e85555' };
+
+    let html = pdfWrapStart('فاتورة');
+    html += `<div style="font-size:24px;font-weight:700;margin-bottom:6px;">فاتورة رقم ${inv.num}</div>`;
+    html += `<div style="display:inline-block;padding:4px 14px;border-radius:20px;background:${stColors[st.key]}22;color:${stColors[st.key]};font-weight:700;font-size:13px;margin-bottom:16px;">${st.label}</div>`;
+    html += `<div style="height:1px;background:#ddd;margin:16px 0;"></div>`;
+    html += rowHtml('العميل', inv.client);
+    html += rowHtml('المشروع', inv.project || '—');
+    html += rowHtml('تاريخ الإصدار', fmtDate(inv.issue));
+    html += rowHtml('تاريخ الاستحقاق', fmtDate(inv.due));
+    if (inv.notes) {
+      html += `<div style="margin-top:16px;"><div style="font-weight:700;color:#555;margin-bottom:6px;">ملاحظات</div><div style="background:#f7f7f9;padding:12px;border-radius:8px;font-size:13px;line-height:1.8;">${inv.notes.replace(/\n/g,'<br>')}</div></div>`;
+    }
+    html += `<div style="height:2px;background:#e8b84b;margin:20px 0;"></div>`;
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:18px;font-weight:700;">الإجمالي المستحق</div>
+      <div style="font-size:24px;font-weight:700;color:#1a1a2e;">${fmt(inv.amount)}</div>
+    </div>`;
+    html += pdfWrapEnd();
+
+    await renderHtmlToPdf(html, `invoice-${inv.num}.pdf`);
+  }
+
+  async function exportInvoicesPDF() {
+    if (!state.invoices.length) { alert('لا توجد فواتير لتصديرها.'); return; }
+    const stColors = { paid: '#2ecc8a', pending: '#e8b84b', overdue: '#e85555' };
+    let totalInv = 0, totalPaid = 0;
+
+    let rows = '';
+    state.invoices.slice().reverse().forEach(inv => {
+      const st = invoiceStatus(inv);
+      totalInv += Number(inv.amount);
+      if (inv.paid) totalPaid += Number(inv.amount);
+      rows += `<tr>
+        <td style="padding:8px;border-bottom:1px solid #eee;font-weight:700;">${inv.num}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;">${inv.client}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;">${fmt(inv.amount)}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;color:#888;">${fmtDate(inv.due)}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;"><span style="padding:2px 10px;border-radius:14px;background:${stColors[st.key]}22;color:${stColors[st.key]};font-size:11px;font-weight:700;">${st.label}</span></td>
+      </tr>`;
+    });
+
+    let html = pdfWrapStart('قائمة الفواتير');
+    html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="background:#f7f7f9;">
+        <th style="padding:8px;text-align:right;">رقم الفاتورة</th>
+        <th style="padding:8px;text-align:right;">العميل</th>
+        <th style="padding:8px;text-align:right;">المبلغ</th>
+        <th style="padding:8px;text-align:right;">تاريخ الاستحقاق</th>
+        <th style="padding:8px;text-align:right;">الحالة</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+    html += `<div style="height:2px;background:#e8b84b;margin:20px 0;"></div>`;
+    html += rowHtml('إجمالي الفواتير', fmt(totalInv));
+    html += rowHtml('المحصّل', `<span style="color:#2ecc8a">${fmt(totalPaid)}</span>`);
+    html += rowHtml('المعلّق', `<span style="color:#e8b84b">${fmt(totalInv - totalPaid)}</span>`);
+    html += pdfWrapEnd();
+
+    await renderHtmlToPdf(html, 'invoices-list.pdf');
+  }
+
+  async function exportExpensesPDF() {
+    if (!state.expenses.length) { alert('لا توجد مصروفات لتصديرها.'); return; }
+    let total = 0;
+    let rows = '';
+    state.expenses.slice().reverse().forEach(e => {
+      total += Number(e.amount);
+      rows += `<tr>
+        <td style="padding:8px;border-bottom:1px solid #eee;color:#888;">${fmtDate(e.date)}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;">${e.desc}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;"><span style="padding:2px 10px;border-radius:14px;background:#5b8dee22;color:#5b8dee;font-size:11px;font-weight:700;">${e.category}</span></td>
+        <td style="padding:8px;border-bottom:1px solid #eee;color:#888;">${e.project || '—'}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;color:#e85555;">${fmt(e.amount)}</td>
+      </tr>`;
+    });
+
+    let html = pdfWrapStart('قائمة المصروفات');
+    html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="background:#f7f7f9;">
+        <th style="padding:8px;text-align:right;">التاريخ</th>
+        <th style="padding:8px;text-align:right;">الوصف</th>
+        <th style="padding:8px;text-align:right;">الفئة</th>
+        <th style="padding:8px;text-align:right;">المشروع</th>
+        <th style="padding:8px;text-align:right;">المبلغ</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+    html += `<div style="height:2px;background:#e8b84b;margin:20px 0;"></div>`;
+    html += rowHtml('إجمالي المصروفات', `<span style="color:#e85555">${fmt(total)}</span>`);
+    html += pdfWrapEnd();
+
+    await renderHtmlToPdf(html, 'expenses-list.pdf');
+  }
+
+  async function exportSummaryPDF() {
+    const totalInv = state.invoices.reduce((s, i) => s + Number(i.amount), 0);
+    const collected = state.invoices.filter(i => i.paid).reduce((s, i) => s + Number(i.amount), 0);
+    const pending = totalInv - collected;
+    const totalExp = state.expenses.reduce((s, e) => s + Number(e.amount), 0);
+    const net = collected - totalExp;
+
+    let html = pdfWrapStart('التقرير المالي الشامل');
+
+    html += `<div style="font-size:16px;font-weight:700;margin-bottom:10px;">نظرة عامة</div>`;
+    html += rowHtml('إجمالي الفواتير', fmt(totalInv));
+    html += rowHtml('المحصّل', `<span style="color:#2ecc8a">${fmt(collected)}</span>`);
+    html += rowHtml('المعلّق', `<span style="color:#e8b84b">${fmt(pending)}</span>`);
+    html += rowHtml('إجمالي المصروفات', `<span style="color:#e85555">${fmt(totalExp)}</span>`);
+    html += rowHtml('الصافي (المحصّل - المصروفات)', `<span style="font-weight:700;color:${net>=0?'#2ecc8a':'#e85555'}">${fmt(net)}</span>`);
+
+    html += `<div style="height:1px;background:#ddd;margin:24px 0;"></div>`;
+    html += `<div style="font-size:16px;font-weight:700;margin-bottom:10px;">المشاريع</div>`;
+    if (!state.projects.length) {
+      html += `<div style="color:#999;font-size:13px;">لا توجد مشاريع مسجلة.</div>`;
+    } else {
+      let prows = '';
+      state.projects.forEach(p => {
+        const pinv = state.invoices.filter(i => i.project === p.name).reduce((s, i) => s + Number(i.amount), 0);
+        const pexp = state.expenses.filter(e => e.project === p.name).reduce((s, e) => s + Number(e.amount), 0);
+        prows += `<tr>
+          <td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;">${p.name}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;color:#888;">${p.budget > 0 ? fmt(p.budget) : '—'}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;color:#2ecc8a;">${fmt(pinv)}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;color:#e85555;">${fmt(pexp)}</td>
+        </tr>`;
+      });
+      html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#f7f7f9;">
+          <th style="padding:8px;text-align:right;">المشروع</th>
+          <th style="padding:8px;text-align:right;">الميزانية</th>
+          <th style="padding:8px;text-align:right;">الفواتير</th>
+          <th style="padding:8px;text-align:right;">المنفق</th>
+        </tr></thead>
+        <tbody>${prows}</tbody>
+      </table>`;
+    }
+
+    html += `<div style="height:1px;background:#ddd;margin:24px 0;"></div>`;
+    html += `<div style="font-size:16px;font-weight:700;margin-bottom:10px;">المصروفات حسب الفئة</div>`;
+    if (!state.expenses.length) {
+      html += `<div style="color:#999;font-size:13px;">لا توجد مصروفات مسجلة.</div>`;
+    } else {
+      const byCategory = {};
+      state.expenses.forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + Number(e.amount); });
+      Object.entries(byCategory).forEach(([cat, amt]) => {
+        html += rowHtml(cat, fmt(amt));
+      });
+    }
+
+    html += pdfWrapEnd();
+    await renderHtmlToPdf(html, 'financial-summary.pdf');
+  }
+
+
   function saveInvoice() {
     const client = document.getElementById('inv-client').value.trim();
     const num = document.getElementById('inv-num').value.trim();
@@ -531,7 +954,7 @@
       document.getElementById('inv-err').innerHTML = '<div class="error-msg">يرجى تعبئة اسم العميل ورقم الفاتورة والمبلغ وتاريخ الاستحقاق.</div>';
       return;
     }
-    state.invoices.push({ id: uid(), num, client, project: document.getElementById('inv-project').value.trim(), amount: Number(amount), issue: document.getElementById('inv-issue').value, due, notes: document.getElementById('inv-notes').value.trim(), paid: false });
+    state.invoices.push({ id: uid(), num, client, project: document.getElementById('inv-project').value.trim(), amount: Number(amount), issue: document.getElementById('inv-issue').value, due, notes: document.getElementById('inv-notes').value.trim(), paid: false, createdBy: currentUserName, createdAt: new Date().toISOString() });
     persist(); renderAll(); closeModal('invoice');
     ['inv-client','inv-num','inv-amount','inv-due','inv-project','inv-notes'].forEach(id => document.getElementById(id).value = '');
   }
@@ -544,7 +967,7 @@
       document.getElementById('exp-err').innerHTML = '<div class="error-msg">يرجى تعبئة الوصف والمبلغ والتاريخ.</div>';
       return;
     }
-    state.expenses.push({ id: uid(), desc, amount: Number(amount), date, category: document.getElementById('exp-cat').value, project: document.getElementById('exp-project').value.trim() });
+    state.expenses.push({ id: uid(), desc, amount: Number(amount), date, category: document.getElementById('exp-cat').value, project: document.getElementById('exp-project').value.trim(), createdBy: currentUserName, createdAt: new Date().toISOString() });
     persist(); renderAll(); closeModal('expense');
     ['exp-desc','exp-amount','exp-project'].forEach(id => document.getElementById(id).value = '');
   }
@@ -555,14 +978,14 @@
       document.getElementById('prj-err').innerHTML = '<div class="error-msg">يرجى إدخال اسم المشروع.</div>';
       return;
     }
-    state.projects.push({ id: uid(), name, client: document.getElementById('prj-client').value.trim(), budget: Number(document.getElementById('prj-budget').value) || 0, start: document.getElementById('prj-start').value, status: document.getElementById('prj-status').value });
+    state.projects.push({ id: uid(), name, client: document.getElementById('prj-client').value.trim(), budget: Number(document.getElementById('prj-budget').value) || 0, start: document.getElementById('prj-start').value, status: document.getElementById('prj-status').value, createdBy: currentUserName, createdAt: new Date().toISOString() });
     persist(); renderAll(); closeModal('project');
     ['prj-name','prj-client','prj-budget'].forEach(id => document.getElementById(id).value = '');
   }
 
   function markPaid(id) {
     const inv = state.invoices.find(i => i.id === id);
-    if (inv) { inv.paid = true; persist(); renderAll(); }
+    if (inv) { inv.paid = true; inv.paidBy = currentUserName; inv.paidAt = new Date().toISOString(); persist(); renderAll(); }
   }
 
   function deleteItem(type, id) {
@@ -577,7 +1000,6 @@
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 
-  loadData();
 </script>
 </body>
 </html>
