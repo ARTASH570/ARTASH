@@ -247,6 +247,15 @@
         <div class="install-text"><strong>تثبيت التطبيق</strong>اضغط لإضافته إلى الشاشة الرئيسية</div>
         <button class="btn btn-accent btn-sm" id="install-btn">تثبيت</button>
       </div>
+      <div id="overdue-banner" style="display:none;background:var(--red-bg);border:1px solid rgba(232,85,85,0.3);border-radius:var(--radius);padding:14px 16px;margin-bottom:1rem;cursor:pointer" onclick="goToOverdueInvoices()">
+        <div style="display:flex;align-items:center;gap:10px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--red)" id="overdue-title"></div>
+            <div style="font-size:12px;color:var(--text2)" id="overdue-sub"></div>
+          </div>
+        </div>
+      </div>
       <div class="metrics">
         <div class="metric">
           <div class="metric-label">إجمالي الفواتير</div>
@@ -272,10 +281,16 @@
       <div class="card">
         <div class="card-header">
           <span class="card-title">آخر النشاطات</span>
-          <button class="btn btn-pdf btn-sm" onclick="exportSummaryPDF()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            تقرير مالي PDF
-          </button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-pdf btn-sm" onclick="exportSummaryPDF()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              تقرير مالي PDF
+            </button>
+            <button class="btn btn-sm" id="btn-backup" onclick="exportFullBackup()" style="display:none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              نسخة احتياطية
+            </button>
+          </div>
         </div>
         <div id="recent-list"></div>
       </div>
@@ -296,6 +311,25 @@
             <input type="text" class="search-input" id="inv-search" placeholder="بحث برقم الفاتورة أو اسم العميل…" oninput="renderInvoices()" />
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </div>
+          <select id="inv-status-filter" onchange="renderInvoices()" style="max-width:140px">
+            <option value="">كل الحالات</option>
+            <option value="paid">مدفوعة</option>
+            <option value="pending">معلّقة</option>
+            <option value="overdue">متأخرة</option>
+          </select>
+        </div>
+        <div class="toolbar-row">
+          <div class="form-group" style="flex:1;min-width:130px">
+            <label style="font-size:11px">من تاريخ</label>
+            <input type="date" id="inv-date-from" onchange="renderInvoices()" />
+          </div>
+          <div class="form-group" style="flex:1;min-width:130px">
+            <label style="font-size:11px">إلى تاريخ</label>
+            <input type="date" id="inv-date-to" onchange="renderInvoices()" />
+          </div>
+          <button class="btn btn-sm" style="align-self:flex-end" onclick="clearInvoiceFilters()">مسح الفلاتر</button>
+        </div>
+        <div class="toolbar-row">
           <button class="btn btn-pdf" onclick="exportInvoicesPDF()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             تصدير القائمة PDF
@@ -329,6 +363,28 @@
             <input type="text" class="search-input" id="exp-search" placeholder="بحث بالوصف أو الفئة أو المشروع…" oninput="renderExpenses()" />
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </div>
+          <select id="exp-cat-filter" onchange="renderExpenses()" style="max-width:140px">
+            <option value="">كل الفئات</option>
+            <option value="مواد">مواد</option>
+            <option value="عمالة">عمالة</option>
+            <option value="معدات">معدات</option>
+            <option value="نقل">نقل</option>
+            <option value="تصاريح">تصاريح</option>
+            <option value="أخرى">أخرى</option>
+          </select>
+        </div>
+        <div class="toolbar-row">
+          <div class="form-group" style="flex:1;min-width:130px">
+            <label style="font-size:11px">من تاريخ</label>
+            <input type="date" id="exp-date-from" onchange="renderExpenses()" />
+          </div>
+          <div class="form-group" style="flex:1;min-width:130px">
+            <label style="font-size:11px">إلى تاريخ</label>
+            <input type="date" id="exp-date-to" onchange="renderExpenses()" />
+          </div>
+          <button class="btn btn-sm" style="align-self:flex-end" onclick="clearExpenseFilters()">مسح الفلاتر</button>
+        </div>
+        <div class="toolbar-row">
           <button class="btn btn-pdf" onclick="exportExpensesPDF()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             تصدير القائمة PDF
@@ -491,8 +547,8 @@
         if (doc.exists) {
           const d = doc.data();
           currentUserName = d.name || user.email;
-          currentUserRole = d.role || 'accountant';
-          currentUserProject = d.assignedProject || '';
+          currentUserRole = (d.role || 'accountant').trim();
+          currentUserProject = (d.assignedProject || '').trim();
         } else {
           currentUserName = user.email;
           currentUserRole = 'accountant';
@@ -521,7 +577,7 @@
 
     // Nav tabs
     document.getElementById('nav-dashboard').style.display = isEngineer ? 'none' : '';
-    document.getElementById('nav-projects').style.display = isEngineer ? 'none' : '';
+    // Engineers can see the Projects tab, but renderProjects() restricts it to their own project
 
     // Add/create buttons
     const newInvoiceBtn = document.getElementById('btn-new-invoice');
@@ -530,6 +586,10 @@
     if (newInvoiceBtn) newInvoiceBtn.style.display = isAccountant ? 'none' : '';
     if (newExpenseBtn) newExpenseBtn.style.display = isAccountant ? 'none' : '';
     if (newProjectBtn) newProjectBtn.style.display = (isAccountant || isEngineer) ? 'none' : '';
+
+    // Backup button (admin only)
+    const backupBtn = document.getElementById('btn-backup');
+    if (backupBtn) backupBtn.style.display = isAdmin ? '' : 'none';
 
     // For engineer: lock project field and land on invoices tab
     if (isEngineer) {
@@ -602,11 +662,59 @@
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function today() { return new Date().toISOString().split('T')[0]; }
 
+  // ===== Smart search helpers =====
+  // Normalizes Arabic text: removes diacritics, unifies letter variants (أ/إ/آ -> ا، ى -> ي، ة -> ه),
+  // converts Arabic-Indic digits to Western digits, and lowercases.
+  function normalizeSearchText(str) {
+    const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+    return String(str ?? '')
+      .toLowerCase()
+      .replace(/[\u064B-\u065F\u0670\u0640]/g, '') // remove tashkeel + tatweel
+      .replace(/[إأآا]/g, 'ا')
+      .replace(/ى/g, 'ي')
+      .replace(/ة/g, 'ه')
+      .replace(/[٠-٩]/g, d => String(arabicDigits.indexOf(d)))
+      .trim();
+  }
+  // Matches if every word in the query exists somewhere in the haystack (order-independent).
+  function smartMatch(haystack, query) {
+    const h = normalizeSearchText(haystack);
+    const tokens = normalizeSearchText(query).split(/\s+/).filter(Boolean);
+    if (!tokens.length) return true;
+    return tokens.every(t => h.includes(t));
+  }
+
   function showTab(tab, btn) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
     document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('visible');
     btn.classList.add('active');
+  }
+
+  function clearInvoiceFilters() {
+    document.getElementById('inv-search').value = '';
+    document.getElementById('inv-status-filter').value = '';
+    document.getElementById('inv-date-from').value = '';
+    document.getElementById('inv-date-to').value = '';
+    renderInvoices();
+  }
+
+  function clearExpenseFilters() {
+    document.getElementById('exp-search').value = '';
+    document.getElementById('exp-cat-filter').value = '';
+    document.getElementById('exp-date-from').value = '';
+    document.getElementById('exp-date-to').value = '';
+    renderExpenses();
+  }
+
+  function goToOverdueInvoices() {
+    clearInvoiceFilters();
+    document.getElementById('inv-status-filter').value = 'overdue';
+    renderInvoices();
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-invoices').classList.add('visible');
+    document.getElementById('nav-invoices').classList.add('active');
   }
 
   function openModal(type) {
@@ -716,7 +824,7 @@
     document.getElementById('prj-audit-section').innerHTML = audit;
     document.getElementById('prj-audit-section').style.display = '';
 
-    // Assigned engineers (admin/accountant only)
+    // Assigned engineers + their recent activity (admin/accountant only)
     const membersSection = document.getElementById('prj-members-section');
     const membersList = document.getElementById('prj-members-list');
     if (currentUserRole !== 'engineer') {
@@ -727,7 +835,25 @@
         if (snap.empty) {
           membersList.textContent = 'لا يوجد مهندسون معينون على هذا المشروع.';
         } else {
-          membersList.innerHTML = snap.docs.map(d => `<span style="display:inline-block;background:var(--blue-bg);color:var(--blue);padding:3px 10px;border-radius:14px;font-size:12px;margin:2px;">${d.data().name || 'بدون اسم'}</span>`).join('');
+          membersList.innerHTML = snap.docs.map(d => {
+            const memberName = d.data().name || 'بدون اسم';
+            // Find this member's most recent activity on this project
+            const activities = [];
+            state.invoices.filter(i => i.project === p.name).forEach(i => {
+              if (i.createdBy === memberName && i.createdAt) activities.push({ at: i.createdAt, text: `أضاف فاتورة ${i.num}` });
+              if (i.updatedBy === memberName && i.updatedAt) activities.push({ at: i.updatedAt, text: `عدّل فاتورة ${i.num}` });
+              if (i.paidBy === memberName && i.paidAt) activities.push({ at: i.paidAt, text: `سدّد فاتورة ${i.num}` });
+            });
+            state.expenses.filter(e => e.project === p.name).forEach(e => {
+              if (e.createdBy === memberName && e.createdAt) activities.push({ at: e.createdAt, text: `أضاف مصروف "${e.desc}"` });
+            });
+            activities.sort((a,b) => new Date(b.at) - new Date(a.at));
+            const lastActivity = activities[0];
+            const activityText = lastActivity ? `آخر نشاط: ${lastActivity.text} — ${fmtDate(lastActivity.at.split('T')[0])}` : 'لا يوجد نشاط مسجّل بعد';
+            return `<div style="display:inline-block;background:var(--blue-bg);color:var(--blue);padding:6px 12px;border-radius:10px;font-size:12px;margin:3px;">
+              <strong>${memberName}</strong><div style="color:var(--text3);font-size:11px;margin-top:2px">${activityText}</div>
+            </div>`;
+          }).join('');
         }
       } catch(e) {
         membersList.textContent = 'تعذّر تحميل البيانات.';
@@ -736,9 +862,14 @@
       membersSection.style.display = 'none';
     }
 
-    // Permissions: only admin can edit projects
-    const readonly = currentUserRole !== 'admin';
+    // Permissions:
+    // - admin: full edit of all fields
+    // - engineer assigned to this project: can edit everything except the project name
+    // - everyone else (accountant, or engineer on another project): view-only
+    const isOwnProjectEngineer = currentUserRole === 'engineer' && p.name === currentUserProject;
+    const readonly = !(currentUserRole === 'admin' || isOwnProjectEngineer);
     setFormReadonly('project', readonly);
+    if (isOwnProjectEngineer) document.getElementById('prj-name').readOnly = true; // prevent renaming (breaks project linkage)
     document.getElementById('prj-save-btn').style.display = readonly ? 'none' : '';
   }
 
@@ -798,6 +929,18 @@
     document.getElementById('m-pending').textContent = fmt(pending);
     document.getElementById('m-expenses').textContent = fmt(totalExp);
 
+    // Overdue invoices alert
+    const overdueInvoices = state.invoices.filter(i => !i.paid && i.due && new Date(i.due) < new Date());
+    const banner = document.getElementById('overdue-banner');
+    if (overdueInvoices.length) {
+      const overdueTotal = overdueInvoices.reduce((s, i) => s + Number(i.amount), 0);
+      document.getElementById('overdue-title').textContent = `لديك ${overdueInvoices.length} فاتورة متأخرة عن السداد`;
+      document.getElementById('overdue-sub').textContent = `بإجمالي ${fmt(overdueTotal)} — اضغط للعرض`;
+      banner.style.display = '';
+    } else {
+      banner.style.display = 'none';
+    }
+
     const combined = [
       ...state.invoices.map(i => ({ date: i.issue || i.due, text: `فاتورة ${i.num} — ${i.client}`, amt: i.amount, type: 'income' })),
       ...state.expenses.map(e => ({ date: e.date, text: `${e.category}: ${e.desc}`, amt: e.amount, type: 'expense' }))
@@ -822,14 +965,28 @@
     `).join('');
   }
 
-  function renderInvoices() {
-    const tb = document.getElementById('invoice-table');
-    const q = (document.getElementById('inv-search')?.value || '').trim().toLowerCase();
+  function getFilteredInvoices() {
+    const q = (document.getElementById('inv-search')?.value || '').trim();
+    const statusFilter = document.getElementById('inv-status-filter')?.value || '';
+    const dateFrom = document.getElementById('inv-date-from')?.value || '';
+    const dateTo = document.getElementById('inv-date-to')?.value || '';
     let list = state.invoices.slice().reverse();
     if (currentUserRole === 'engineer') list = list.filter(i => i.project === currentUserProject);
-    if (q) list = list.filter(i => (i.num + ' ' + i.client + ' ' + (i.project||'')).toLowerCase().includes(q));
+    if (q) list = list.filter(i => smartMatch(
+      [i.num, i.client, i.project, i.notes, fmt(i.amount), i.amount, fmtDate(i.due), fmtDate(i.issue), invoiceStatus(i).label].join(' '),
+      q
+    ));
+    if (statusFilter) list = list.filter(i => invoiceStatus(i).key === statusFilter);
+    if (dateFrom) list = list.filter(i => i.due && i.due >= dateFrom);
+    if (dateTo) list = list.filter(i => i.due && i.due <= dateTo);
+    return { list, hasFilters: !!(q || statusFilter || dateFrom || dateTo) };
+  }
+
+  function renderInvoices() {
+    const tb = document.getElementById('invoice-table');
+    const { list, hasFilters } = getFilteredInvoices();
     if (!list.length) {
-      tb.innerHTML = `<tr><td colspan="6"><div class="empty-state">${q ? 'لا توجد نتائج مطابقة.' : 'لا توجد فواتير بعد.'}</div></td></tr>`;
+      tb.innerHTML = `<tr><td colspan="6"><div class="empty-state">${hasFilters ? 'لا توجد نتائج مطابقة للفلاتر.' : 'لا توجد فواتير بعد.'}</div></td></tr>`;
       return;
     }
     const canEdit = currentUserRole !== 'accountant';
@@ -850,14 +1007,28 @@
     }).join('');
   }
 
-  function renderExpenses() {
-    const tb = document.getElementById('expense-table');
-    const q = (document.getElementById('exp-search')?.value || '').trim().toLowerCase();
+  function getFilteredExpenses() {
+    const q = (document.getElementById('exp-search')?.value || '').trim();
+    const catFilter = document.getElementById('exp-cat-filter')?.value || '';
+    const dateFrom = document.getElementById('exp-date-from')?.value || '';
+    const dateTo = document.getElementById('exp-date-to')?.value || '';
     let list = state.expenses.slice().reverse();
     if (currentUserRole === 'engineer') list = list.filter(e => e.project === currentUserProject);
-    if (q) list = list.filter(e => (e.desc + ' ' + e.category + ' ' + (e.project||'')).toLowerCase().includes(q));
+    if (q) list = list.filter(e => smartMatch(
+      [e.desc, e.category, e.project, fmt(e.amount), e.amount, fmtDate(e.date)].join(' '),
+      q
+    ));
+    if (catFilter) list = list.filter(e => e.category === catFilter);
+    if (dateFrom) list = list.filter(e => e.date && e.date >= dateFrom);
+    if (dateTo) list = list.filter(e => e.date && e.date <= dateTo);
+    return { list, hasFilters: !!(q || catFilter || dateFrom || dateTo) };
+  }
+
+  function renderExpenses() {
+    const tb = document.getElementById('expense-table');
+    const { list, hasFilters } = getFilteredExpenses();
     if (!list.length) {
-      tb.innerHTML = `<tr><td colspan="6"><div class="empty-state">${q ? 'لا توجد نتائج مطابقة.' : 'لا توجد مصروفات بعد.'}</div></td></tr>`;
+      tb.innerHTML = `<tr><td colspan="6"><div class="empty-state">${hasFilters ? 'لا توجد نتائج مطابقة للفلاتر.' : 'لا توجد مصروفات بعد.'}</div></td></tr>`;
       return;
     }
     const canEdit = currentUserRole !== 'accountant';
@@ -875,11 +1046,12 @@
 
   function renderProjects() {
     const el = document.getElementById('project-list');
-    const q = (document.getElementById('prj-search')?.value || '').trim().toLowerCase();
+    const q = (document.getElementById('prj-search')?.value || '').trim();
     let list = state.projects.slice().reverse();
-    if (q) list = list.filter(p => (p.name + ' ' + (p.client||'')).toLowerCase().includes(q));
+    if (currentUserRole === 'engineer') list = list.filter(p => p.name === currentUserProject);
+    if (q) list = list.filter(p => smartMatch([p.name, p.client, p.status, fmt(p.budget||0)].join(' '), q));
     if (!list.length) {
-      el.innerHTML = `<div class="empty-state">${q ? 'لا توجد نتائج مطابقة.' : 'لا توجد مشاريع بعد.'}</div>`;
+      el.innerHTML = `<div class="empty-state">${q ? 'لا توجد نتائج مطابقة.' : (currentUserRole === 'engineer' ? 'لم يتم تعيينك على أي مشروع بعد.' : 'لا توجد مشاريع بعد.')}</div>`;
       return;
     }
     const stMap = { 'نشط': 'badge-active', 'مكتمل': 'badge-completed', 'متوقف': 'badge-hold' };
@@ -1013,8 +1185,7 @@
   }
 
   async function exportInvoicesPDF() {
-    let invoiceList = state.invoices.slice().reverse();
-    if (currentUserRole === 'engineer') invoiceList = invoiceList.filter(i => i.project === currentUserProject);
+    const { list: invoiceList, hasFilters } = getFilteredInvoices();
     if (!invoiceList.length) { alert('لا توجد فواتير لتصديرها.'); return; }
     const stColors = { paid: '#2ecc8a', pending: '#e8b84b', overdue: '#e85555' };
     let totalInv = 0, totalPaid = 0;
@@ -1033,7 +1204,7 @@
       </tr>`;
     });
 
-    let html = pdfWrapStart('قائمة الفواتير');
+    let html = pdfWrapStart(hasFilters ? 'قائمة الفواتير (مفلترة)' : 'قائمة الفواتير');
     html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead><tr style="background:#f7f7f9;">
         <th style="padding:8px;text-align:right;">رقم الفاتورة</th>
@@ -1054,8 +1225,7 @@
   }
 
   async function exportExpensesPDF() {
-    let expenseList = state.expenses.slice().reverse();
-    if (currentUserRole === 'engineer') expenseList = expenseList.filter(e => e.project === currentUserProject);
+    const { list: expenseList, hasFilters } = getFilteredExpenses();
     if (!expenseList.length) { alert('لا توجد مصروفات لتصديرها.'); return; }
     let total = 0;
     let rows = '';
@@ -1070,7 +1240,7 @@
       </tr>`;
     });
 
-    let html = pdfWrapStart('قائمة المصروفات');
+    let html = pdfWrapStart(hasFilters ? 'قائمة المصروفات (مفلترة)' : 'قائمة المصروفات');
     html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead><tr style="background:#f7f7f9;">
         <th style="padding:8px;text-align:right;">التاريخ</th>
@@ -1100,8 +1270,7 @@
   }
 
   function exportInvoicesExcel() {
-    let invoiceList = state.invoices.slice().reverse();
-    if (currentUserRole === 'engineer') invoiceList = invoiceList.filter(i => i.project === currentUserProject);
+    const { list: invoiceList } = getFilteredInvoices();
     if (!invoiceList.length) { alert('لا توجد فواتير لتصديرها.'); return; }
 
     const rows = invoiceList.map(i => {
@@ -1128,8 +1297,7 @@
   }
 
   function exportExpensesExcel() {
-    let expenseList = state.expenses.slice().reverse();
-    if (currentUserRole === 'engineer') expenseList = expenseList.filter(e => e.project === currentUserProject);
+    const { list: expenseList } = getFilteredExpenses();
     if (!expenseList.length) { alert('لا توجد مصروفات لتصديرها.'); return; }
 
     const rows = expenseList.map(e => ({
@@ -1206,6 +1374,24 @@
 
     html += pdfWrapEnd();
     await renderHtmlToPdf(html, 'financial-summary.pdf');
+  }
+
+  function exportFullBackup() {
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      exportedBy: currentUserName,
+      data: state
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = today();
+    a.href = url;
+    a.download = `artash-backup-${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
 
