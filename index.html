@@ -513,7 +513,7 @@
   <div class="modal">
     <div class="modal-title">النسخ الاحتياطية</div>
     <div style="font-size:12px;color:var(--text3);margin-bottom:12px;">
-      يتم إنشاء نسخة تلقائية أسبوعيًا (يُحتفظ بآخر 8 نسخ). يمكنك أيضًا أخذ نسخة فورية أو استرجاع نسخة سابقة، أو استيراد نسخة من ملف.
+      يتم إنشاء نسخة تلقائية أسبوعيًا (يُحتفظ بآخر 12 نسخة ≈ 3 شهور). يمكنك أيضًا أخذ نسخة فورية أو استرجاع نسخة سابقة، أو استيراد نسخة من ملف.
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
       <button class="btn btn-accent btn-sm" onclick="exportFullBackup().then(()=>openBackupsModal())">أخذ نسخة الآن وتنزيلها</button>
@@ -1447,13 +1447,13 @@
     }
   }
 
-  // Keeps only the most recent 8 backups (~2 months of weekly backups)
+  // Keeps only the most recent 12 backups (~3 months of weekly backups)
   async function pruneOldBackups() {
     try {
       const snap = await BACKUPS_COL.orderBy('createdAt', 'desc').get();
       const docs = snap.docs;
-      if (docs.length > 8) {
-        const toDelete = docs.slice(8);
+      if (docs.length > 12) {
+        const toDelete = docs.slice(12);
         await Promise.all(toDelete.map(d => d.ref.delete()));
       }
     } catch(e) {
