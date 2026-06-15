@@ -174,6 +174,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -237,6 +238,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
       المشاريع
     </button>
+    <button id="nav-settings" onclick="showTab('settings', this)" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      الإعدادات
+    </button>
   </nav>
 
   <main>
@@ -247,15 +252,7 @@
         <div class="install-text"><strong>تثبيت التطبيق</strong>اضغط لإضافته إلى الشاشة الرئيسية</div>
         <button class="btn btn-accent btn-sm" id="install-btn">تثبيت</button>
       </div>
-      <div id="overdue-banner" style="display:none;background:var(--red-bg);border:1px solid rgba(232,85,85,0.3);border-radius:var(--radius);padding:14px 16px;margin-bottom:1rem;cursor:pointer" onclick="goToOverdueInvoices()">
-        <div style="display:flex;align-items:center;gap:10px">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--red)" id="overdue-title"></div>
-            <div style="font-size:12px;color:var(--text2)" id="overdue-sub"></div>
-          </div>
-        </div>
-      </div>
+      <div id="alerts-container"></div>
       <div class="metrics">
         <div class="metric">
           <div class="metric-label">إجمالي الفواتير</div>
@@ -276,6 +273,14 @@
           <div class="metric-label">المصروفات</div>
           <div class="metric-value" id="m-expenses" style="color:var(--red)">—</div>
           <div class="metric-sub">إجمالي الإنفاق</div>
+        </div>
+      </div>
+      <div class="card" id="chart-card" style="display:none">
+        <div class="card-header">
+          <span class="card-title">الإنفاق مقابل الميزانية لكل مشروع</span>
+        </div>
+        <div style="position:relative;height:240px;">
+          <canvas id="budget-chart"></canvas>
         </div>
       </div>
       <div class="card">
@@ -423,6 +428,36 @@
       </div>
     </div>
 
+    <!-- الإعدادات (للمدير فقط) -->
+    <div id="tab-settings" class="section">
+      <div class="card">
+        <div class="card-header"><span class="card-title">شعار الشركة</span></div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">يظهر هذا الشعار في رأس جميع تقارير وفواتير PDF بدل النص الافتراضي.</p>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <div id="logo-preview-wrap" style="width:90px;height:90px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--border);">
+            <img id="logo-preview" style="display:none;max-width:100%;max-height:100%;" />
+            <span id="logo-placeholder" style="font-size:11px;color:var(--text3)">لا يوجد شعار</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button class="btn btn-accent btn-sm" onclick="document.getElementById('logo-file-input').click()">رفع / تغيير الشعار</button>
+            <input type="file" id="logo-file-input" accept="image/*" style="display:none" onchange="uploadLogo(event)" />
+            <button class="btn btn-sm btn-danger" onclick="removeLogo()">إزالة الشعار</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">إدارة الموظفين</span>
+          <button class="btn btn-accent" onclick="openEmployeeModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            إضافة موظف
+          </button>
+        </div>
+        <div id="employees-list"><div class="empty-state">جارٍ التحميل…</div></div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -527,6 +562,35 @@
   </div>
 </div>
 
+<!-- نافذة إضافة/تعديل موظف -->
+<div class="modal-overlay" id="modal-employee">
+  <div class="modal">
+    <div class="modal-title" id="emp-modal-title">إضافة موظف</div>
+    <input type="hidden" id="emp-edit-uid" value="" />
+    <div id="emp-err"></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>الاسم *</label><input id="emp-name" placeholder="اسم الموظف" /></div>
+      <div class="form-group full" id="emp-email-group"><label>البريد الإلكتروني *</label><input id="emp-email" type="email" placeholder="example@email.com" /></div>
+      <div class="form-group full" id="emp-password-group"><label>كلمة المرور *</label><input id="emp-password" type="password" placeholder="6 أحرف على الأقل" /></div>
+      <div class="form-group full"><label>الدور *</label>
+        <select id="emp-role" onchange="onEmpRoleChange()">
+          <option value="admin">مدير / IT (صلاحيات كاملة)</option>
+          <option value="accountant">محاسب (عرض فقط)</option>
+          <option value="engineer">مهندس ميداني (مشروع واحد)</option>
+        </select>
+      </div>
+      <div class="form-group full" id="emp-project-group" style="display:none">
+        <label>المشروع المعيّن *</label>
+        <select id="emp-project"></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-accent" id="emp-save-btn" onclick="saveEmployee()">حفظ</button>
+      <button class="btn" onclick="closeModal('employee')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ===== Firebase Setup =====
   const firebaseConfig = {
@@ -544,8 +608,10 @@
 
   const COMPANY_DOC = db.collection('company').doc('main');
   const BACKUPS_COL = db.collection('backups');
+  const SETTINGS_DOC = db.collection('company').doc('settings');
   let unsubscribeSync = null;
   let autoBackupChecked = false;
+  let companyLogo = '';
 
   let currentUser = null;
   let currentUserName = '';
@@ -612,6 +678,11 @@
     // Backup button (admin only)
     const backupBtn = document.getElementById('btn-backup');
     if (backupBtn) backupBtn.style.display = isAdmin ? '' : 'none';
+
+    // Settings tab (admin only)
+    const settingsNav = document.getElementById('nav-settings');
+    if (settingsNav) settingsNav.style.display = isAdmin ? '' : 'none';
+    if (isAdmin) loadCompanySettings();
 
     // For engineer: lock project field and land on invoices tab
     if (isEngineer) {
@@ -711,6 +782,7 @@
     document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('visible');
     btn.classList.add('active');
+    if (tab === 'settings') loadEmployeesList();
   }
 
   function clearInvoiceFilters() {
@@ -732,6 +804,20 @@
   function goToOverdueInvoices() {
     clearInvoiceFilters();
     document.getElementById('inv-status-filter').value = 'overdue';
+    renderInvoices();
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-invoices').classList.add('visible');
+    document.getElementById('nav-invoices').classList.add('active');
+  }
+
+  function goToDueSoonInvoices() {
+    clearInvoiceFilters();
+    const now = new Date();
+    const in3days = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    document.getElementById('inv-status-filter').value = 'pending';
+    document.getElementById('inv-date-from').value = today();
+    document.getElementById('inv-date-to').value = in3days.toISOString().split('T')[0];
     renderInvoices();
     document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
     document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
@@ -956,17 +1042,86 @@
     document.getElementById('m-pending').textContent = fmt(pending);
     document.getElementById('m-expenses').textContent = fmt(totalExp);
 
-    // Overdue invoices alert
-    const overdueInvoices = state.invoices.filter(i => !i.paid && i.due && new Date(i.due) < new Date());
-    const banner = document.getElementById('overdue-banner');
+    // ===== Alerts: overdue invoices, due-soon invoices, over-budget projects =====
+    const alerts = [];
+    const now = new Date();
+
+    const overdueInvoices = state.invoices.filter(i => !i.paid && i.due && new Date(i.due) < now);
     if (overdueInvoices.length) {
       const overdueTotal = overdueInvoices.reduce((s, i) => s + Number(i.amount), 0);
-      document.getElementById('overdue-title').textContent = `لديك ${overdueInvoices.length} فاتورة متأخرة عن السداد`;
-      document.getElementById('overdue-sub').textContent = `بإجمالي ${fmt(overdueTotal)} — اضغط للعرض`;
-      banner.style.display = '';
-    } else {
-      banner.style.display = 'none';
+      alerts.push({
+        color: 'red', icon: 'alert-circle',
+        title: `لديك ${overdueInvoices.length} فاتورة متأخرة عن السداد`,
+        sub: `بإجمالي ${fmt(overdueTotal)} — اضغط للعرض`,
+        onclick: 'goToOverdueInvoices()'
+      });
     }
+
+    if (currentUserRole !== 'engineer') {
+      const in3days = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      const dueSoonInvoices = state.invoices.filter(i => !i.paid && i.due && new Date(i.due) >= now && new Date(i.due) <= in3days);
+      if (dueSoonInvoices.length) {
+        const dueSoonTotal = dueSoonInvoices.reduce((s, i) => s + Number(i.amount), 0);
+        alerts.push({
+          color: 'yellow', icon: 'clock',
+          title: `${dueSoonInvoices.length} فاتورة مستحقة خلال ٣ أيام`,
+          sub: `بإجمالي ${fmt(dueSoonTotal)} — تابع العميل قبل التأخير`,
+          onclick: 'goToDueSoonInvoices()'
+        });
+      }
+    }
+
+    if (currentUserRole !== 'engineer') {
+      const overBudgetProjects = state.projects.filter(p => {
+        if (!p.budget || p.budget <= 0) return false;
+        const spent = state.expenses.filter(e => e.project === p.name).reduce((s, e) => s + Number(e.amount), 0);
+        return (spent / p.budget) >= 0.9;
+      });
+      if (overBudgetProjects.length) {
+        alerts.push({
+          color: 'red', icon: 'trending-up',
+          title: `${overBudgetProjects.length} مشروع تجاوز 90% من ميزانيته`,
+          sub: overBudgetProjects.map(p => p.name).join('، '),
+          onclick: `showTab('projects', document.getElementById('nav-projects'))`
+        });
+      }
+    } else if (currentUserProject) {
+      const p = state.projects.find(pr => pr.name === currentUserProject);
+      if (p && p.budget > 0) {
+        const spent = state.expenses.filter(e => e.project === p.name).reduce((s, e) => s + Number(e.amount), 0);
+        if (spent / p.budget >= 0.9) {
+          alerts.push({
+            color: 'red', icon: 'trending-up',
+            title: `مشروعك تجاوز 90% من الميزانية`,
+            sub: `${fmt(spent)} من ${fmt(p.budget)}`,
+            onclick: `showTab('projects', document.getElementById('nav-projects'))`
+          });
+        }
+      }
+    }
+
+    const icons = {
+      'alert-circle': '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+      'clock': '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+      'trending-up': '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>'
+    };
+    const colorVars = { red: 'var(--red)', yellow: '#e8b84b' };
+    const bgVars = { red: 'var(--red-bg)', yellow: 'rgba(232,184,75,0.1)' };
+    const borderVars = { red: 'rgba(232,85,85,0.3)', yellow: 'rgba(232,184,75,0.3)' };
+
+    document.getElementById('alerts-container').innerHTML = alerts.map(a => `
+      <div style="background:${bgVars[a.color]};border:1px solid ${borderVars[a.color]};border-radius:var(--radius);padding:14px 16px;margin-bottom:1rem;cursor:pointer" onclick="${a.onclick}">
+        <div style="display:flex;align-items:center;gap:10px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${colorVars[a.color]}" stroke-width="2">${icons[a.icon]}</svg>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:${colorVars[a.color]}">${a.title}</div>
+            <div style="font-size:12px;color:var(--text2)">${a.sub}</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    renderBudgetChart();
 
     const combined = [
       ...state.invoices.map(i => ({ date: i.issue || i.due, text: `فاتورة ${i.num} — ${i.client}`, amt: i.amount, type: 'income' })),
@@ -990,6 +1145,48 @@
         </div>
       </div>
     `).join('');
+  }
+
+  let budgetChartInstance = null;
+  function renderBudgetChart() {
+    const card = document.getElementById('chart-card');
+    const canvas = document.getElementById('budget-chart');
+
+    let projects = state.projects.filter(p => p.budget > 0);
+    if (currentUserRole === 'engineer') projects = projects.filter(p => p.name === currentUserProject);
+
+    if (!projects.length) {
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = '';
+
+    const labels = projects.map(p => p.name);
+    const spent = projects.map(p => state.expenses.filter(e => e.project === p.name).reduce((s, e) => s + Number(e.amount), 0));
+    const budgets = projects.map(p => Number(p.budget));
+
+    if (budgetChartInstance) budgetChartInstance.destroy();
+    budgetChartInstance = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'المنفق', data: spent, backgroundColor: '#e85555' },
+          { label: 'الميزانية', data: budgets, backgroundColor: '#5b8dee' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#cfd3ec', font: { family: 'Cairo' } } }
+        },
+        scales: {
+          x: { ticks: { color: '#9aa0c3', font: { family: 'Cairo' } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+          y: { ticks: { color: '#9aa0c3', font: { family: 'Cairo' } }, grid: { color: 'rgba(255,255,255,0.06)' } }
+        }
+      }
+    });
   }
 
   function getFilteredInvoices() {
@@ -1116,10 +1313,13 @@
   // ===== PDF Export Functions (Arabic via HTML render) =====
 
   function pdfWrapStart(title) {
+    const brandHtml = companyLogo
+      ? `<img src="${companyLogo}" style="max-height:50px;max-width:160px;margin-bottom:6px;" />`
+      : `<div style="color:#e8b84b;font-size:26px;font-weight:700;margin-bottom:4px;">Artash</div>`;
     return `
     <div style="direction:rtl;text-align:right;font-family:'Cairo',sans-serif;width:760px;background:#fff;color:#1a1a2e;padding:0;">
       <div style="background:#1a1a2e;padding:20px;text-align:center;">
-        <div style="color:#e8b84b;font-size:26px;font-weight:700;margin-bottom:4px;">Artash</div>
+        ${brandHtml}
         <div style="color:#fff;font-size:16px;">${title}</div>
       </div>
       <div style="padding:28px;">
@@ -1531,6 +1731,225 @@
     renderAll();
     closeModal('backups');
     alert('تم استرجاع النسخة الاحتياطية بنجاح.');
+  }
+
+  // ===== Company Settings: Logo =====
+
+  async function loadCompanySettings() {
+    try {
+      const doc = await SETTINGS_DOC.get();
+      companyLogo = doc.exists ? (doc.data().logoBase64 || '') : '';
+    } catch(e) {
+      companyLogo = '';
+    }
+    updateLogoPreview();
+  }
+
+  function updateLogoPreview() {
+    const img = document.getElementById('logo-preview');
+    const placeholder = document.getElementById('logo-placeholder');
+    if (!img) return;
+    if (companyLogo) {
+      img.src = companyLogo;
+      img.style.display = '';
+      placeholder.style.display = 'none';
+    } else {
+      img.style.display = 'none';
+      placeholder.style.display = '';
+    }
+  }
+
+  function uploadLogo(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = async () => {
+        // Resize to max 200x200 to keep the stored file small
+        const maxSize = 200;
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          const ratio = Math.min(maxSize / width, maxSize / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        const base64 = canvas.toDataURL('image/png');
+        try {
+          await SETTINGS_DOC.set({ logoBase64: base64, updatedBy: currentUserName, updatedAt: new Date().toISOString() }, { merge: true });
+          companyLogo = base64;
+          updateLogoPreview();
+        } catch(err) {
+          alert('تعذّر حفظ الشعار. حاول مرة أخرى.');
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  }
+
+  async function removeLogo() {
+    if (!confirm('إزالة شعار الشركة من جميع التقارير؟')) return;
+    try {
+      await SETTINGS_DOC.set({ logoBase64: '', updatedBy: currentUserName, updatedAt: new Date().toISOString() }, { merge: true });
+      companyLogo = '';
+      updateLogoPreview();
+    } catch(e) {
+      alert('تعذّر إزالة الشعار.');
+    }
+  }
+
+  // ===== Employee Management =====
+
+  let secondaryApp = null;
+  function getSecondaryAuth() {
+    if (!secondaryApp) {
+      secondaryApp = firebase.initializeApp(firebaseConfig, 'Secondary');
+    }
+    return secondaryApp.auth();
+  }
+
+  let employeesCache = [];
+
+  async function loadEmployeesList() {
+    const list = document.getElementById('employees-list');
+    if (!list) return;
+    list.innerHTML = '<div class="empty-state">جارٍ التحميل…</div>';
+    try {
+      const snap = await db.collection('users').get();
+      employeesCache = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      if (!employeesCache.length) {
+        list.innerHTML = '<div class="empty-state">لا يوجد موظفون بعد.</div>';
+        return;
+      }
+      list.innerHTML = employeesCache.map((u, idx) => {
+        const roleLabel = ROLE_LABELS[u.role] || u.role || '—';
+        const projectInfo = u.role === 'engineer' ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">المشروع: ${u.assignedProject || 'غير معيّن'}</div>` : '';
+        const isSelf = u.uid === currentUser?.uid;
+        return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <div>
+            <div style="font-weight:700;font-size:13px">${u.name || 'بدون اسم'} <span style="font-size:11px;color:var(--text3)">(${roleLabel})</span>${isSelf ? ' <span style="font-size:11px;color:var(--accent)">— أنت</span>' : ''}</div>
+            ${projectInfo}
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" onclick="openEmployeeModal(${idx})">تعديل</button>
+            ${isSelf ? '' : `<button class="btn btn-sm btn-danger" onclick="deleteEmployee(${idx})">حذف</button>`}
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      list.innerHTML = '<div class="empty-state">تعذّر تحميل قائمة الموظفين.</div>';
+    }
+  }
+
+  function populateProjectDropdown() {
+    const sel = document.getElementById('emp-project');
+    sel.innerHTML = state.projects.map(p => `<option value="${p.name}">${p.name}</option>`).join('') || '<option value="">لا توجد مشاريع</option>';
+  }
+
+  function onEmpRoleChange() {
+    const role = document.getElementById('emp-role').value;
+    document.getElementById('emp-project-group').style.display = role === 'engineer' ? '' : 'none';
+  }
+
+  function openEmployeeModal(idx) {
+    document.getElementById('modal-employee').classList.add('open');
+    document.getElementById('emp-err').innerHTML = '';
+    populateProjectDropdown();
+    const isEdit = idx !== undefined && idx !== null;
+    if (isEdit) {
+      const u = employeesCache[idx];
+      document.getElementById('emp-modal-title').textContent = 'تعديل بيانات الموظف';
+      document.getElementById('emp-edit-uid').value = u.uid;
+      document.getElementById('emp-name').value = u.name || '';
+      document.getElementById('emp-role').value = u.role || 'accountant';
+      document.getElementById('emp-project').value = u.assignedProject || '';
+      document.getElementById('emp-email-group').style.display = 'none';
+      document.getElementById('emp-password-group').style.display = 'none';
+    } else {
+      document.getElementById('emp-modal-title').textContent = 'إضافة موظف';
+      document.getElementById('emp-edit-uid').value = '';
+      document.getElementById('emp-name').value = '';
+      document.getElementById('emp-email').value = '';
+      document.getElementById('emp-password').value = '';
+      document.getElementById('emp-role').value = 'accountant';
+      document.getElementById('emp-email-group').style.display = '';
+      document.getElementById('emp-password-group').style.display = '';
+    }
+    onEmpRoleChange();
+  }
+
+  async function saveEmployee() {
+    const errEl = document.getElementById('emp-err');
+    errEl.innerHTML = '';
+    const name = document.getElementById('emp-name').value.trim();
+    const role = document.getElementById('emp-role').value;
+    const assignedProject = role === 'engineer' ? document.getElementById('emp-project').value : '';
+    const editUid = document.getElementById('emp-edit-uid').value;
+
+    if (!name) {
+      errEl.innerHTML = '<div class="error-msg">يرجى إدخال اسم الموظف.</div>';
+      return;
+    }
+    if (role === 'engineer' && !assignedProject) {
+      errEl.innerHTML = '<div class="error-msg">يرجى اختيار المشروع المعيّن للمهندس.</div>';
+      return;
+    }
+
+    const saveBtn = document.getElementById('emp-save-btn');
+    saveBtn.disabled = true; saveBtn.textContent = 'جارٍ الحفظ…';
+
+    try {
+      if (editUid) {
+        // Update existing employee profile
+        await db.collection('users').doc(editUid).set({ name, role, assignedProject }, { merge: true });
+      } else {
+        // Create new employee: Auth account (via secondary app) + Firestore profile
+        const email = document.getElementById('emp-email').value.trim();
+        const password = document.getElementById('emp-password').value;
+        if (!email || !password) {
+          errEl.innerHTML = '<div class="error-msg">يرجى إدخال البريد الإلكتروني وكلمة المرور.</div>';
+          saveBtn.disabled = false; saveBtn.textContent = 'حفظ';
+          return;
+        }
+        if (password.length < 6) {
+          errEl.innerHTML = '<div class="error-msg">كلمة المرور يجب أن تكون 6 أحرف على الأقل.</div>';
+          saveBtn.disabled = false; saveBtn.textContent = 'حفظ';
+          return;
+        }
+        const secondaryAuth = getSecondaryAuth();
+        const cred = await secondaryAuth.createUserWithEmailAndPassword(email, password);
+        const newUid = cred.user.uid;
+        await secondaryAuth.signOut();
+        await db.collection('users').doc(newUid).set({ name, email, role, assignedProject });
+      }
+      closeModal('employee');
+      loadEmployeesList();
+    } catch(e) {
+      let msg = 'حدث خطأ، حاول مرة أخرى.';
+      if (e.code === 'auth/email-already-in-use') msg = 'هذا البريد الإلكتروني مستخدم من قبل.';
+      else if (e.code === 'auth/invalid-email') msg = 'البريد الإلكتروني غير صالح.';
+      else if (e.code === 'auth/weak-password') msg = 'كلمة المرور ضعيفة جدًا.';
+      errEl.innerHTML = `<div class="error-msg">${msg}</div>`;
+    }
+    saveBtn.disabled = false; saveBtn.textContent = 'حفظ';
+  }
+
+  async function deleteEmployee(idx) {
+    const u = employeesCache[idx];
+    if (!u) return;
+    const ok = confirm(`إلغاء صلاحيات "${u.name}"؟\n\nملاحظة: سيظل حساب تسجيل الدخول قائمًا، لكنه لن يملك أي دور أو صلاحيات بعد الآن (ولن يستطيع رؤية بيانات الشركة).`);
+    if (!ok) return;
+    try {
+      await db.collection('users').doc(u.uid).delete();
+      loadEmployeesList();
+    } catch(e) {
+      alert('تعذّر حذف الموظف.');
+    }
   }
 
   function saveInvoice() {
