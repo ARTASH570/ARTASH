@@ -286,9 +286,9 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               تقرير مالي PDF
             </button>
-            <button class="btn btn-sm" id="btn-backup" onclick="exportFullBackup()" style="display:none">
+            <button class="btn btn-sm" id="btn-backup" onclick="openBackupsModal()" style="display:none">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              نسخة احتياطية
+              النسخ الاحتياطية
             </button>
           </div>
         </div>
@@ -508,6 +508,25 @@
   </div>
 </div>
 
+<!-- نافذة النسخ الاحتياطية -->
+<div class="modal-overlay" id="modal-backups">
+  <div class="modal">
+    <div class="modal-title">النسخ الاحتياطية</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px;">
+      يتم إنشاء نسخة تلقائية أسبوعيًا (يُحتفظ بآخر 8 نسخ). يمكنك أيضًا أخذ نسخة فورية أو استرجاع نسخة سابقة، أو استيراد نسخة من ملف.
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+      <button class="btn btn-accent btn-sm" onclick="exportFullBackup().then(()=>openBackupsModal())">أخذ نسخة الآن وتنزيلها</button>
+      <button class="btn btn-sm" onclick="document.getElementById('backup-file-input').click()">استيراد نسخة من ملف</button>
+      <input type="file" id="backup-file-input" accept="application/json" style="display:none" onchange="importBackupFile(event)" />
+    </div>
+    <div id="backups-list"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('backups')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ===== Firebase Setup =====
   const firebaseConfig = {
@@ -524,7 +543,9 @@
   db.enablePersistence().catch(() => {});
 
   const COMPANY_DOC = db.collection('company').doc('main');
+  const BACKUPS_COL = db.collection('backups');
   let unsubscribeSync = null;
+  let autoBackupChecked = false;
 
   let currentUser = null;
   let currentUserName = '';
@@ -566,6 +587,7 @@
     } else {
       currentUser = null;
       if (unsubscribeSync) { unsubscribeSync(); unsubscribeSync = null; }
+      autoBackupChecked = false;
       document.getElementById('login-screen').classList.remove('hidden');
     }
   });
@@ -831,11 +853,12 @@
       membersSection.style.display = '';
       membersList.textContent = 'جارٍ التحميل…';
       try {
-        const snap = await db.collection('users').where('assignedProject', '==', p.name).get();
-        if (snap.empty) {
+        const allUsers = await db.collection('users').get();
+        const members = allUsers.docs.filter(d => (d.data().assignedProject || '').trim() === p.name.trim());
+        if (!members.length) {
           membersList.textContent = 'لا يوجد مهندسون معينون على هذا المشروع.';
         } else {
-          membersList.innerHTML = snap.docs.map(d => {
+          membersList.innerHTML = members.map(d => {
             const memberName = d.data().name || 'بدون اسم';
             // Find this member's most recent activity on this project
             const activities = [];
@@ -890,6 +913,10 @@
       }
       renderAll();
       setSyncing(false);
+      if (currentUserRole === 'admin' && !autoBackupChecked) {
+        autoBackupChecked = true;
+        checkAndCreateAutoBackup();
+      }
     }, err => {
       console.error('Sync error:', err);
     });
@@ -1376,24 +1403,135 @@
     await renderHtmlToPdf(html, 'financial-summary.pdf');
   }
 
-  function exportFullBackup() {
-    const backup = {
-      exportedAt: new Date().toISOString(),
-      exportedBy: currentUserName,
-      data: state
-    };
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  function downloadBackupFile(backupObj, filename) {
+    const blob = new Blob([JSON.stringify(backupObj, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const dateStr = today();
     a.href = url;
-    a.download = `artash-backup-${dateStr}.json`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
 
+  // Manual backup: downloads a JSON file AND saves a copy to Firestore (so it appears in the backups list)
+  async function exportFullBackup() {
+    const dateStr = today();
+    const backup = { createdAt: new Date().toISOString(), createdBy: currentUserName, type: 'manual', data: state };
+    downloadBackupFile(backup, `artash-backup-${dateStr}.json`);
+    try {
+      await BACKUPS_COL.doc(`${dateStr}_manual_${uid()}`).set(backup);
+      await pruneOldBackups();
+    } catch(e) {
+      console.error('Backup save error:', e);
+    }
+  }
+
+  // Automatically saves a snapshot to Firestore once every 7 days (admin-triggered on login)
+  async function checkAndCreateAutoBackup() {
+    try {
+      const snap = await BACKUPS_COL.orderBy('createdAt', 'desc').limit(1).get();
+      const now = new Date();
+      if (!snap.empty) {
+        const last = new Date(snap.docs[0].data().createdAt);
+        const daysSince = (now - last) / (1000 * 60 * 60 * 24);
+        if (daysSince < 7) return; // not due yet
+      }
+      const dateStr = today();
+      const backup = { createdAt: now.toISOString(), createdBy: currentUserName, type: 'auto', data: state };
+      await BACKUPS_COL.doc(`${dateStr}_auto`).set(backup);
+      await pruneOldBackups();
+    } catch(e) {
+      console.error('Auto-backup error:', e);
+    }
+  }
+
+  // Keeps only the most recent 8 backups (~2 months of weekly backups)
+  async function pruneOldBackups() {
+    try {
+      const snap = await BACKUPS_COL.orderBy('createdAt', 'desc').get();
+      const docs = snap.docs;
+      if (docs.length > 8) {
+        const toDelete = docs.slice(8);
+        await Promise.all(toDelete.map(d => d.ref.delete()));
+      }
+    } catch(e) {
+      console.error('Prune backups error:', e);
+    }
+  }
+
+  let backupsCache = [];
+
+  async function openBackupsModal() {
+    document.getElementById('modal-backups').classList.add('open');
+    const list = document.getElementById('backups-list');
+    list.innerHTML = '<div class="empty-state">جارٍ التحميل…</div>';
+    try {
+      const snap = await BACKUPS_COL.orderBy('createdAt', 'desc').get();
+      if (snap.empty) {
+        backupsCache = [];
+        list.innerHTML = '<div class="empty-state">لا توجد نسخ احتياطية محفوظة بعد. أول نسخة تُنشأ تلقائيًا أسبوعيًا.</div>';
+        return;
+      }
+      backupsCache = snap.docs.map(d => d.data());
+      list.innerHTML = backupsCache.map((b, idx) => {
+        const typeLabel = b.type === 'auto' ? 'تلقائية' : 'يدوية';
+        const counts = b.data ? `${(b.data.invoices||[]).length} فاتورة، ${(b.data.expenses||[]).length} مصروف، ${(b.data.projects||[]).length} مشروع` : '';
+        return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <div>
+            <div style="font-weight:700;font-size:13px">${fmtDate(b.createdAt.split('T')[0])} <span style="font-size:11px;color:var(--text3)">(${typeLabel})</span></div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${counts} — بواسطة ${b.createdBy || '—'}</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" onclick="downloadBackupFile(backupsCache[${idx}], 'artash-backup-${b.createdAt.split('T')[0]}.json')">تنزيل</button>
+            <button class="btn btn-sm btn-danger" onclick="restoreFromBackupIndex(${idx})">استرجاع</button>
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      list.innerHTML = '<div class="empty-state">تعذّر تحميل النسخ الاحتياطية.</div>';
+    }
+  }
+
+  function restoreFromBackupIndex(idx) {
+    const b = backupsCache[idx];
+    if (!b || !b.data) return;
+    confirmAndRestore(b.data);
+  }
+
+  // Restore from an uploaded .json backup file
+  function importBackupFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const parsed = JSON.parse(e.target.result);
+        const data = parsed.data || parsed; // support raw state or wrapped backup
+        if (!data || !Array.isArray(data.invoices) || !Array.isArray(data.expenses) || !Array.isArray(data.projects)) {
+          alert('الملف غير صالح. يجب أن يكون ملف نسخة احتياطية صادر من Artash.');
+          return;
+        }
+        confirmAndRestore(data);
+      } catch(err) {
+        alert('تعذّر قراءة الملف. تأكد أنه ملف JSON صالح.');
+      }
+      event.target.value = '';
+    };
+    reader.readAsText(file);
+  }
+
+  function confirmAndRestore(data) {
+    const counts = `${(data.invoices||[]).length} فاتورة، ${(data.expenses||[]).length} مصروف، ${(data.projects||[]).length} مشروع`;
+    const ok = confirm(`تحذير: سيتم استبدال جميع البيانات الحالية بالكامل بهذه النسخة (${counts}).\n\nهذا الإجراء لا يمكن التراجع عنه. هل أنت متأكد؟`);
+    if (!ok) return;
+    state = { invoices: data.invoices || [], expenses: data.expenses || [], projects: data.projects || [] };
+    persist();
+    renderAll();
+    closeModal('backups');
+    alert('تم استرجاع النسخة الاحتياطية بنجاح.');
+  }
 
   function saveInvoice() {
     const client = document.getElementById('inv-client').value.trim();
