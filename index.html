@@ -200,6 +200,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -534,6 +535,28 @@
         </div>
         <div id="employees-list"><div class="empty-state">جارٍ التحميل…</div></div>
       </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">سجل النشاط</span>
+        </div>
+        <div class="toolbar-row">
+          <select id="activity-type-filter" onchange="loadActivityLog(true)" style="max-width:160px">
+            <option value="">كل الأنشطة</option>
+            <option value="invoice">الفواتير</option>
+            <option value="expense">المصروفات</option>
+            <option value="project">المشاريع</option>
+            <option value="client">العملاء</option>
+            <option value="supplier">الموردين</option>
+            <option value="employee">الموظفين</option>
+            <option value="backup">النسخ الاحتياطية</option>
+          </select>
+        </div>
+        <div id="activity-log-list"><div class="empty-state">جارٍ التحميل…</div></div>
+        <div style="margin-top:10px;text-align:center;">
+          <button class="btn btn-sm" id="activity-load-more-btn" onclick="loadActivityLog(false)" style="display:none">تحميل المزيد</button>
+        </div>
+      </div>
     </div>
 
   </main>
@@ -657,16 +680,32 @@
 <div class="modal-overlay" id="modal-backups">
   <div class="modal">
     <div class="modal-title">النسخ الاحتياطية</div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:12px;">
-      يتم إنشاء نسخة تلقائية أسبوعيًا (يُحتفظ بآخر 12 نسخة ≈ 3 شهور). "معاينة Excel" تفتح محتوى أي نسخة قديمة للاطلاع عليها فقط <strong>بدون أي تأثير على بياناتكم الحالية</strong>. فقط "استرجاع" يستبدل البيانات الحالية بالكامل.
+    <div id="backups-main-view">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px;">
+        يتم إنشاء نسخة تلقائية أسبوعيًا (يُحتفظ بآخر 12 نسخة ≈ 3 شهور). "معاينة Excel" تفتح محتوى أي نسخة قديمة للاطلاع عليها فقط <strong>بدون أي تأثير على بياناتكم الحالية</strong>. فقط "استرجاع" يستبدل البيانات الحالية بالكامل، ويتطلب كلمة مرور حسابك للتأكيد.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <button class="btn btn-accent btn-sm" onclick="exportFullBackup().then(()=>openBackupsModal())">أخذ نسخة الآن وتنزيلها</button>
+        <button class="btn btn-sm" onclick="document.getElementById('backup-file-input').click()">استيراد نسخة من ملف</button>
+        <input type="file" id="backup-file-input" accept="application/json" style="display:none" onchange="importBackupFile(event)" />
+      </div>
+      <div id="backups-list"></div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-      <button class="btn btn-accent btn-sm" onclick="exportFullBackup().then(()=>openBackupsModal())">أخذ نسخة الآن وتنزيلها</button>
-      <button class="btn btn-sm" onclick="document.getElementById('backup-file-input').click()">استيراد نسخة من ملف</button>
-      <input type="file" id="backup-file-input" accept="application/json" style="display:none" onchange="importBackupFile(event)" />
+    <div id="restore-confirm-panel" style="display:none;">
+      <div style="background:var(--red-bg);border:1px solid rgba(232,85,85,0.3);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;font-size:13px;color:var(--red);line-height:1.7;">
+        ⚠️ تحذير: سيتم <strong>حذف جميع البيانات الحالية نهائيًا</strong> واستبدالها بهذه النسخة (<span id="restore-confirm-counts"></span>). لا يمكن التراجع عن هذا الإجراء.
+      </div>
+      <div class="form-group full">
+        <label>أدخل كلمة مرور حسابك للتأكيد</label>
+        <input type="password" id="restore-confirm-password" placeholder="كلمة المرور" />
+      </div>
+      <div id="restore-confirm-err"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="btn btn-danger" id="restore-confirm-btn" onclick="submitRestoreConfirm()">تأكيد الاسترجاع نهائيًا</button>
+        <button class="btn" onclick="cancelRestoreConfirm()">إلغاء</button>
+      </div>
     </div>
-    <div id="backups-list"></div>
-    <div class="modal-actions">
+    <div class="modal-actions" id="backups-close-actions">
       <button class="btn" onclick="closeModal('backups')">إغلاق</button>
     </div>
   </div>
@@ -767,9 +806,24 @@
   const COMPANY_DOC = db.collection('company').doc('main');
   const BACKUPS_COL = db.collection('backups');
   const SETTINGS_DOC = db.collection('company').doc('settings');
+  const ACTIVITY_COL = db.collection('activity');
   let unsubscribeSync = null;
   let autoBackupChecked = false;
   let companyLogo = '';
+
+  // Deep link support: scanning a QR code on a printed invoice opens it directly,
+  // e.g. https://.../?invoice=abc123 — handled once the user is logged in and data has synced.
+  let pendingDeepLinkInvoiceId = new URLSearchParams(location.search).get('invoice');
+  function handlePendingDeepLink() {
+    if (!pendingDeepLinkInvoiceId) return;
+    const id = pendingDeepLinkInvoiceId;
+    pendingDeepLinkInvoiceId = null;
+    // Clean the URL so refreshing or re-saving doesn't reopen the modal repeatedly.
+    history.replaceState(null, '', location.pathname);
+    if (state.invoices.some(i => i.id === id)) {
+      setTimeout(() => openInvoiceDetail(id), 150);
+    }
+  }
 
   let currentUser = null;
   let currentUserName = '';
@@ -923,6 +977,17 @@
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function today() { return new Date().toISOString().split('T')[0]; }
 
+  // Records an entry in the company-wide activity log (separate Firestore collection,
+  // so it can be queried/paginated cheaply without ever reading the main data document).
+  // Fire-and-forget: never blocks or fails the action it's logging.
+  function logActivity(type, action, description) {
+    ACTIVITY_COL.add({
+      type, action, description,
+      by: currentUserName,
+      at: new Date().toISOString()
+    }).catch(e => console.error('Activity log error:', e));
+  }
+
   // ===== Theme (light/dark) =====
   function applyTheme(theme) {
     document.body.classList.toggle('light-mode', theme === 'light');
@@ -968,7 +1033,7 @@
     document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('visible');
     btn.classList.add('active');
-    if (tab === 'settings') loadEmployeesList();
+    if (tab === 'settings') { loadEmployeesList(); loadActivityLog(true); }
   }
 
   function clearInvoiceFilters() {
@@ -1324,6 +1389,7 @@
         autoBackupChecked = true;
         checkAndCreateAutoBackup();
       }
+      handlePendingDeepLink();
     }, err => {
       console.error('Sync error:', err);
     });
@@ -1765,8 +1831,10 @@
     const editIdx = document.getElementById('client-edit-id').value;
     if (editIdx !== '') {
       Object.assign(state.clients[Number(editIdx)], fields, { updatedBy: currentUserName, updatedAt: new Date().toISOString() });
+      logActivity('client', 'update', `تعديل بيانات عميل "${name}"`);
     } else {
       state.clients.push({ id: uid(), ...fields, createdBy: currentUserName, createdAt: new Date().toISOString() });
+      logActivity('client', 'create', `إضافة عميل "${name}"`);
     }
     persist(); renderAll(); closeModal('client');
   }
@@ -1774,7 +1842,9 @@
   function deleteClient(idx) {
     if (currentUserRole === 'accountant') return;
     if (!confirm('حذف هذا العميل من الدليل؟ (فواتيره الحالية لن تتأثر)')) return;
+    const name = state.clients[idx]?.name || '';
     state.clients.splice(idx, 1);
+    logActivity('client', 'delete', `حذف عميل "${name}"`);
     persist(); renderAll();
   }
 
@@ -1873,8 +1943,10 @@
     const editIdx = document.getElementById('supplier-edit-id').value;
     if (editIdx !== '') {
       Object.assign(state.suppliers[Number(editIdx)], fields, { updatedBy: currentUserName, updatedAt: new Date().toISOString() });
+      logActivity('supplier', 'update', `تعديل بيانات مورد "${name}"`);
     } else {
       state.suppliers.push({ id: uid(), ...fields, createdBy: currentUserName, createdAt: new Date().toISOString() });
+      logActivity('supplier', 'create', `إضافة مورد "${name}"`);
     }
     persist(); renderAll(); closeModal('supplier');
   }
@@ -1882,7 +1954,9 @@
   function deleteSupplier(idx) {
     if (currentUserRole === 'accountant') return;
     if (!confirm('حذف هذا المورد من الدليل؟ (مصروفاته الحالية لن تتأثر)')) return;
+    const name = state.suppliers[idx]?.name || '';
     state.suppliers.splice(idx, 1);
+    logActivity('supplier', 'delete', `حذف مورد "${name}"`);
     persist(); renderAll();
   }
 
@@ -1901,6 +1975,22 @@
       </div>
       <div style="padding:28px;">
     `;
+  }
+
+  // Generates a QR code as a data URL pointing to a deep link inside the app
+  // (e.g. opening a specific invoice directly after scanning a printed copy).
+  function generateQrDataUrl(targetUrl, size) {
+    try {
+      const canvas = document.createElement('canvas');
+      new QRious({ element: canvas, value: targetUrl, size: size || 110, level: 'M' });
+      return canvas.toDataURL('image/png');
+    } catch(e) {
+      console.error('QR generation error:', e);
+      return '';
+    }
+  }
+  function invoiceDeepLinkUrl(invoiceId) {
+    return `${location.origin}${location.pathname}?invoice=${invoiceId}`;
   }
 
   function pdfWrapEnd() {
@@ -2002,6 +2092,13 @@
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
         <div style="font-size:14px;color:#555;">المتبقي</div>
         <div style="font-size:16px;font-weight:700;color:#e85555;">${fmt(remaining)}</div>
+      </div>`;
+    }
+    const qrUrl = generateQrDataUrl(invoiceDeepLinkUrl(inv.id), 100);
+    if (qrUrl) {
+      html += `<div style="margin-top:24px;display:flex;align-items:center;gap:14px;border-top:1px solid #eee;padding-top:16px;">
+        <img src="${qrUrl}" style="width:80px;height:80px;" />
+        <div style="font-size:12px;color:#888;">مسح هذا الرمز لعرض حالة الفاتورة وتفاصيلها مباشرةً داخل التطبيق</div>
       </div>`;
     }
     html += pdfWrapEnd();
@@ -2327,6 +2424,7 @@
 
   async function openBackupsModal() {
     document.getElementById('modal-backups').classList.add('open');
+    cancelRestoreConfirm();
     const list = document.getElementById('backups-list');
     list.innerHTML = '<div class="empty-state">جارٍ التحميل…</div>';
     try {
@@ -2419,13 +2517,54 @@
     reader.readAsText(file);
   }
 
+  let pendingRestoreData = null;
+
   function confirmAndRestore(data) {
+    pendingRestoreData = data;
     const counts = `${(data.invoices||[]).length} فاتورة، ${(data.expenses||[]).length} مصروف، ${(data.projects||[]).length} مشروع`;
-    const ok = confirm(`تحذير: سيتم استبدال جميع البيانات الحالية بالكامل بهذه النسخة (${counts}).\n\nهذا الإجراء لا يمكن التراجع عنه. هل أنت متأكد؟`);
-    if (!ok) return;
-    state = { invoices: data.invoices || [], expenses: data.expenses || [], projects: data.projects || [] };
-    persist();
+    document.getElementById('restore-confirm-counts').textContent = counts;
+    document.getElementById('restore-confirm-password').value = '';
+    document.getElementById('restore-confirm-err').innerHTML = '';
+    document.getElementById('backups-main-view').style.display = 'none';
+    document.getElementById('backups-close-actions').style.display = 'none';
+    document.getElementById('restore-confirm-panel').style.display = '';
+  }
+
+  function cancelRestoreConfirm() {
+    pendingRestoreData = null;
+    document.getElementById('restore-confirm-panel').style.display = 'none';
+    document.getElementById('backups-main-view').style.display = '';
+    document.getElementById('backups-close-actions').style.display = '';
+  }
+
+  async function submitRestoreConfirm() {
+    const password = document.getElementById('restore-confirm-password').value;
+    const errEl = document.getElementById('restore-confirm-err');
+    errEl.innerHTML = '';
+    if (!password) {
+      errEl.innerHTML = '<div class="error-msg">يرجى إدخال كلمة المرور.</div>';
+      return;
+    }
+    const btn = document.getElementById('restore-confirm-btn');
+    btn.disabled = true; btn.textContent = 'جارٍ التحقق…';
+    try {
+      // Re-authenticate against the account's real password via Firebase Auth itself —
+      // no separate secret is stored anywhere, so this can't be bypassed by editing the app's data.
+      const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+      await currentUser.reauthenticateWithCredential(credential);
+    } catch(e) {
+      btn.disabled = false; btn.textContent = 'تأكيد الاسترجاع نهائيًا';
+      errEl.innerHTML = '<div class="error-msg">كلمة المرور غير صحيحة. لم يتم استرجاع أي بيانات.</div>';
+      return;
+    }
+
+    const data = pendingRestoreData;
+    state = { invoices: data.invoices || [], expenses: data.expenses || [], projects: data.projects || [], clients: data.clients || [], suppliers: data.suppliers || [] };
+    await persist();
+    logActivity('backup', 'restore', `⚠️ استرجاع نسخة احتياطية بتاريخ ${fmtDate(data.createdAt ? data.createdAt.split('T')[0] : today())} — استُبدلت جميع بيانات الشركة`);
     renderAll();
+    btn.disabled = false; btn.textContent = 'تأكيد الاسترجاع نهائيًا';
+    pendingRestoreData = null;
     closeModal('backups');
     alert('تم استرجاع النسخة الاحتياطية بنجاح.');
   }
@@ -2544,6 +2683,73 @@
     }
   }
 
+  // ===== Activity Log =====
+  // Stored in its own Firestore collection (not inside company/main) so browsing history
+  // never requires re-reading the whole financial-data document, and the log itself
+  // is paginated (25 at a time) to keep reads small even after years of use.
+
+  let activityLastDoc = null;
+  let activityLoadingMore = false;
+  const ACTIVITY_PAGE_SIZE = 25;
+  const ACTIVITY_TYPE_LABELS = { invoice: 'فاتورة', expense: 'مصروف', project: 'مشروع', client: 'عميل', supplier: 'مورد', employee: 'موظف', backup: 'نسخة احتياطية' };
+  const ACTIVITY_ACTION_COLORS = { create: 'var(--green)', update: 'var(--blue)', delete: 'var(--red)', payment: 'var(--green)', restore: 'var(--red)' };
+
+  async function loadActivityLog(reset) {
+    const list = document.getElementById('activity-log-list');
+    const moreBtn = document.getElementById('activity-load-more-btn');
+    if (!list || activityLoadingMore) return;
+    activityLoadingMore = true;
+    if (reset) {
+      activityLastDoc = null;
+      list.innerHTML = '<div class="empty-state">جارٍ التحميل…</div>';
+    } else {
+      moreBtn.textContent = 'جارٍ التحميل…';
+      moreBtn.disabled = true;
+    }
+    try {
+      const typeFilter = document.getElementById('activity-type-filter')?.value || '';
+      let q = ACTIVITY_COL.orderBy('at', 'desc');
+      if (typeFilter) q = q.where('type', '==', typeFilter);
+      if (!reset && activityLastDoc) q = q.startAfter(activityLastDoc);
+      q = q.limit(ACTIVITY_PAGE_SIZE);
+
+      const snap = await q.get();
+      const entries = snap.docs.map(d => d.data());
+      activityLastDoc = snap.docs.length ? snap.docs[snap.docs.length - 1] : activityLastDoc;
+
+      const rowsHtml = entries.map(a => {
+        const color = ACTIVITY_ACTION_COLORS[a.action] || 'var(--text2)';
+        return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div>
+            <div style="font-size:13px;color:${color}">${a.description}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${a.by || 'غير معروف'} — ${fmtDate(a.at.split('T')[0])} ${new Date(a.at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+          <span class="badge" style="background:var(--surface);color:var(--text3);font-size:10px;flex-shrink:0;">${ACTIVITY_TYPE_LABELS[a.type] || a.type}</span>
+        </div>`;
+      }).join('');
+
+      if (reset) {
+        list.innerHTML = entries.length ? rowsHtml : '<div class="empty-state">لا يوجد نشاط مسجّل بعد.</div>';
+      } else {
+        list.innerHTML += rowsHtml;
+      }
+      moreBtn.style.display = snap.docs.length === ACTIVITY_PAGE_SIZE ? '' : 'none';
+    } catch(e) {
+      console.error('Activity log error:', e);
+      if (reset) {
+        // Firestore sometimes needs a one-time index for filtered+sorted queries; its error
+        // includes a direct link that creates it with one tap, so show that instead of a dead end.
+        const hasIndexLink = e.message && e.message.includes('https://');
+        list.innerHTML = hasIndexLink
+          ? `<div class="empty-state">يحتاج هذا الفلتر إعداد مرة واحدة في Firestore. اضغط الرابط في الـ Console (F12) لإنشائه تلقائيًا، أو أزل الفلتر مؤقتًا.</div>`
+          : '<div class="empty-state">تعذّر تحميل سجل النشاط.</div>';
+      }
+    }
+    moreBtn.textContent = 'تحميل المزيد';
+    moreBtn.disabled = false;
+    activityLoadingMore = false;
+  }
+
   function populateProjectCheckboxes(selectedProjects) {
     const wrap = document.getElementById('emp-project-checkboxes');
     if (!state.projects.length) {
@@ -2619,6 +2825,7 @@
       if (editUid) {
         // Update existing employee profile (assignedProject removed via merge field deletion for legacy docs)
         await db.collection('users').doc(editUid).set({ name, role, assignedProjects, assignedProject: firebase.firestore.FieldValue.delete() }, { merge: true });
+        logActivity('employee', 'update', `تعديل صلاحيات الموظف "${name}"`);
       } else {
         // Create new employee: Auth account (via secondary app) + Firestore profile
         const email = document.getElementById('emp-email').value.trim();
@@ -2638,6 +2845,7 @@
         const newUid = cred.user.uid;
         await secondaryAuth.signOut();
         await db.collection('users').doc(newUid).set({ name, email, role, assignedProjects });
+        logActivity('employee', 'create', `إضافة موظف "${name}" (${ROLE_LABELS[role] || role})`);
       }
       closeModal('employee');
       loadEmployeesList();
@@ -2658,6 +2866,7 @@
     if (!ok) return;
     try {
       await db.collection('users').doc(u.uid).delete();
+      logActivity('employee', 'delete', `إلغاء صلاحيات الموظف "${u.name}"`);
       loadEmployeesList();
     } catch(e) {
       alert('تعذّر حذف الموظف.');
@@ -2677,14 +2886,22 @@
     if (currentUserRole === 'engineer' && projectVal && !currentUserProjects.includes(projectVal)) projectVal = '';
     const editId = document.getElementById('inv-edit-id').value;
 
+    const duplicate = state.invoices.find(i => i.num === num && i.id !== editId);
+    if (duplicate) {
+      const ok = confirm(`تنبيه: رقم الفاتورة "${num}" مستخدم من قبل في فاتورة للعميل "${duplicate.client}".\n\nهل تريد المتابعة والحفظ رغم ذلك؟`);
+      if (!ok) return;
+    }
+
     if (editId) {
       // Edit existing invoice
       const inv = state.invoices.find(i => i.id === editId);
       if (!inv) return;
       if (currentUserRole === 'engineer' && !currentUserProjects.includes(inv.project)) return;
       Object.assign(inv, { num, client, project: projectVal, amount: Number(amount), issue: document.getElementById('inv-issue').value, due, notes: document.getElementById('inv-notes').value.trim(), updatedBy: currentUserName, updatedAt: new Date().toISOString() });
+      logActivity('invoice', 'update', `تعديل فاتورة ${num} — ${client}`);
     } else {
       state.invoices.push({ id: uid(), num, client, project: projectVal, amount: Number(amount), issue: document.getElementById('inv-issue').value, due, notes: document.getElementById('inv-notes').value.trim(), payments: [], createdBy: currentUserName, createdAt: new Date().toISOString() });
+      logActivity('invoice', 'create', `إضافة فاتورة ${num} — ${client} (${fmt(Number(amount))})`);
     }
     persist(); renderAll(); closeModal('invoice');
     ['inv-client','inv-num','inv-amount','inv-due','inv-notes'].forEach(id => document.getElementById(id).value = '');
@@ -2702,6 +2919,7 @@
     if (currentUserRole === 'engineer' && projectVal && !currentUserProjects.includes(projectVal)) projectVal = '';
     const supplier = document.getElementById('exp-supplier').value.trim();
     state.expenses.push({ id: uid(), desc, amount: Number(amount), date, category: document.getElementById('exp-cat').value, project: projectVal, supplier, createdBy: currentUserName, createdAt: new Date().toISOString() });
+    logActivity('expense', 'create', `إضافة مصروف "${desc}" (${fmt(Number(amount))})`);
     persist(); renderAll(); closeModal('expense');
     ['exp-desc','exp-amount','exp-supplier'].forEach(id => document.getElementById(id).value = '');
   }
@@ -2724,8 +2942,10 @@
       const p = state.projects.find(x => x.id === editId);
       if (!p) return;
       Object.assign(p, fields, { updatedBy: currentUserName, updatedAt: new Date().toISOString() });
+      logActivity('project', 'update', `تعديل مشروع "${name}"`);
     } else {
       state.projects.push({ id: uid(), ...fields, createdBy: currentUserName, createdAt: new Date().toISOString() });
+      logActivity('project', 'create', `إضافة مشروع "${name}"`);
     }
     persist(); renderAll(); closeModal('project');
     ['prj-name','prj-client','prj-budget'].forEach(id => document.getElementById(id).value = '');
@@ -2740,6 +2960,7 @@
     if (remaining <= 0) return;
     if (!Array.isArray(inv.payments)) inv.payments = getInvoicePayments(inv).filter(p => p.id !== 'legacy');
     inv.payments.push({ id: uid(), amount: remaining, date: today(), by: currentUserName, at: new Date().toISOString() });
+    logActivity('invoice', 'payment', `سداد كامل لفاتورة ${inv.num} — ${fmt(remaining)}`);
     persist(); renderAll();
   }
 
@@ -2756,6 +2977,7 @@
     if (amount > remaining + 0.01) { alert(`المبلغ أكبر من المتبقي (${fmt(remaining)}).`); return; }
     if (!Array.isArray(inv.payments)) inv.payments = getInvoicePayments(inv).filter(p => p.id !== 'legacy');
     inv.payments.push({ id: uid(), amount, date, by: currentUserName, at: new Date().toISOString() });
+    logActivity('invoice', 'payment', `دفعة بقيمة ${fmt(amount)} لفاتورة ${inv.num}`);
     persist();
     renderAll();
     amountInput.value = '';
@@ -2767,6 +2989,7 @@
     if (!inv || !Array.isArray(inv.payments)) return;
     if (!confirm('حذف هذه الدفعة؟')) return;
     inv.payments = inv.payments.filter(p => p.id !== paymentId);
+    logActivity('invoice', 'delete', `حذف دفعة من فاتورة ${inv.num}`);
     persist();
     renderAll();
     openInvoiceDetail(invId);
@@ -2780,7 +3003,11 @@
       if (!item || !currentUserProjects.includes(item.project)) return;
     }
     if (!confirm('هل تريد حذف هذا العنصر؟')) return;
+    const item = state[type].find(i => i.id === id);
+    const typeLabels = { invoices: 'فاتورة', expenses: 'مصروف', projects: 'مشروع' };
+    const itemLabel = item ? (item.num || item.desc || item.name || '') : '';
     state[type] = state[type].filter(i => i.id !== id);
+    logActivity(type === 'invoices' ? 'invoice' : type === 'expenses' ? 'expense' : 'project', 'delete', `حذف ${typeLabels[type] || type}${itemLabel ? ' "' + itemLabel + '"' : ''}`);
     persist(); renderAll();
   }
 
