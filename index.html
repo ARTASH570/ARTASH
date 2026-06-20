@@ -598,6 +598,28 @@
         </div>
       </div>
 
+      <div class="card">
+        <div class="card-header"><span class="card-title">بيانات الشركة</span></div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">تظهر هذه البيانات في ذيل جميع تقارير وفواتير PDF أسفل اسم الشخص الذي أصدر التقرير.</p>
+        <div class="form-grid">
+          <div class="form-group full"><label>العنوان</label><input id="company-address" placeholder="عنوان الشركة بالكامل" /></div>
+          <div class="form-group"><label>رقم الهاتف</label><input id="company-phone" type="tel" placeholder="01xxxxxxxxx" /></div>
+          <div class="form-group"><label>الرقم الضريبي / السجل التجاري</label><input id="company-taxid" placeholder="اختياري" /></div>
+        </div>
+        <button class="btn btn-accent btn-sm" onclick="saveCompanyInfo()">حفظ البيانات</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">تنبيهات الفواتير</span></div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:8px;">عند التفعيل، يظهر إشعار من المتصفح عند فتح التطبيق إذا كانت هناك فواتير متأخرة أو مستحقة قريبًا.</p>
+        <p style="font-size:11px;color:var(--text3);margin-bottom:12px;">ملاحظة: هذه الإشعارات تظهر فقط عند فتح التطبيق فعليًا على هذا الجهاز، وليست إشعارات تصل في الخلفية والتطبيق مغلق تمامًا.</p>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-sm btn-accent" id="notif-enable-btn" onclick="requestNotificationPermission()">تفعيل التنبيهات</button>
+          <button class="btn btn-sm" id="notif-disable-btn" onclick="disableNotifications()" style="display:none">إيقاف التنبيهات</button>
+          <span id="notif-status-label" style="font-size:13px;color:var(--text2)"></span>
+        </div>
+      </div>
+
       <!-- IT-only: invisible to regular admin -->
       <div class="card" id="it-update-section" style="display:none;border:1px solid rgba(91,141,238,0.4);background:rgba(91,141,238,0.05);">
         <div class="card-header"><span class="card-title" style="color:var(--blue)">🛠️ أدوات IT (حصرية)</span></div>
@@ -625,6 +647,14 @@
           </button>
         </div>
         <div id="employees-list"><div class="empty-state">جارٍ التحميل…</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🗑️ سلة المحذوفات</span>
+        </div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">أي عنصر تحذفه (فاتورة، مصروف، مشروع، عميل، مورد، عرض سعر) يبقى هنا لمدة 30 يومًا قبل حذفه نهائيًا، ويمكن استرجاعه في أي وقت خلال هذه الفترة.</p>
+        <div id="trash-list"><div class="empty-state">جارٍ التحميل…</div></div>
       </div>
 
       <div class="card">
@@ -956,6 +986,9 @@
   let unsubscribeSync = null;
   let autoBackupChecked = false;
   let companyLogo = '';
+  let companyAddress = '';
+  let companyPhone = '';
+  let companyTaxId = '';
 
   // Deep link support: scanning a QR code on a printed invoice opens it directly,
   // e.g. https://.../?invoice=abc123 — handled once the user is logged in and data has synced.
@@ -1023,7 +1056,7 @@
         currentUserRole = 'accountant';
         currentUserProjects = [];
       }
-      document.getElementById('user-display').textContent = `${currentUserName} (${ROLE_LABELS[currentUserRole] || currentUserRole})`;
+      document.getElementById('user-display').textContent = `أهلاً، ${currentUserName}`;
       document.getElementById('login-screen').classList.add('hidden');
       applyRolePermissions();
       if (currentUserRole !== 'it') loadMaintenanceMode();
@@ -1254,7 +1287,7 @@
   });
   checkLoginLockout(); // resume countdown display if the page was refreshed mid-lockout
 
-  let state = { invoices: [], expenses: [], projects: [], clients: [], suppliers: [], quotes: [] };
+  let state = { invoices: [], expenses: [], projects: [], clients: [], suppliers: [], quotes: [], trash: [] };
   let deferredPrompt = null;
 
   window.addEventListener('beforeinstallprompt', e => {
@@ -1456,6 +1489,83 @@
     document.body.appendChild(screen);
   }
 
+  // ===== Browser notifications for due invoices =====
+  // IMPORTANT LIMITATION: this uses the standard Notification API, which only fires
+  // while the app/tab has been opened (it is not a push notification service — that
+  // would require Firebase Cloud Messaging + a paid Blaze-plan Cloud Function, which
+  // breaks the project's no-build, single-file deploy model). In practice this means
+  // a notification appears whenever someone opens the app and there's something due —
+  // not silently in the background while the app is fully closed.
+
+  function notificationsSupported() {
+    return 'Notification' in window;
+  }
+
+  function notificationsEnabled() {
+    return notificationsSupported() && Notification.permission === 'granted' && localStorage.getItem('artash_notif_enabled') === '1';
+  }
+
+  async function requestNotificationPermission() {
+    if (!notificationsSupported()) {
+      alert('الإشعارات غير مدعومة في هذا المتصفح.');
+      return;
+    }
+    const result = await Notification.requestPermission();
+    if (result === 'granted') {
+      localStorage.setItem('artash_notif_enabled', '1');
+      new Notification('Artash', { body: 'تم تفعيل التنبيهات بنجاح. ستظهر تنبيهات الفواتير المستحقة عند فتح التطبيق.' });
+    } else {
+      localStorage.setItem('artash_notif_enabled', '0');
+      alert('لم يتم منح إذن الإشعارات. يمكنك تفعيلها لاحقًا من إعدادات المتصفح.');
+    }
+    updateNotificationSettingsUI();
+  }
+
+  function disableNotifications() {
+    localStorage.setItem('artash_notif_enabled', '0');
+    updateNotificationSettingsUI();
+  }
+
+  function updateNotificationSettingsUI() {
+    const statusEl = document.getElementById('notif-status-label');
+    const enableBtn = document.getElementById('notif-enable-btn');
+    const disableBtn = document.getElementById('notif-disable-btn');
+    if (!statusEl) return;
+    if (!notificationsSupported()) {
+      statusEl.textContent = 'الإشعارات غير مدعومة في هذا المتصفح.';
+      if (enableBtn) enableBtn.style.display = 'none';
+      if (disableBtn) disableBtn.style.display = 'none';
+      return;
+    }
+    if (notificationsEnabled()) {
+      statusEl.textContent = '✅ التنبيهات مفعّلة على هذا الجهاز.';
+      if (enableBtn) enableBtn.style.display = 'none';
+      if (disableBtn) disableBtn.style.display = '';
+    } else {
+      statusEl.textContent = 'التنبيهات غير مفعّلة على هذا الجهاز.';
+      if (enableBtn) enableBtn.style.display = '';
+      if (disableBtn) disableBtn.style.display = 'none';
+    }
+  }
+
+  // Fires at most once per calendar day (per browser) to avoid spamming on every re-render.
+  function maybeNotifyDueInvoices(overdueCount, dueSoonCount) {
+    if (!notificationsEnabled()) return;
+    if (!overdueCount && !dueSoonCount) return;
+    const todayKey = today();
+    if (localStorage.getItem('artash_notif_last_date') === todayKey) return;
+    localStorage.setItem('artash_notif_last_date', todayKey);
+
+    let body = '';
+    if (overdueCount) body += `${overdueCount} فاتورة متأخرة عن السداد. `;
+    if (dueSoonCount) body += `${dueSoonCount} فاتورة مستحقة خلال 3 أيام.`;
+    try {
+      new Notification('Artash — تنبيه فواتير', { body, icon: 'icons/icon-192.png' });
+    } catch(e) {
+      console.error('Notification error:', e);
+    }
+  }
+
   // ===== Theme (light/dark) =====
   function applyTheme(theme) {
     document.body.classList.toggle('light-mode', theme === 'light');
@@ -1502,7 +1612,7 @@
     document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('visible');
     btn.classList.add('active');
-    if (tab === 'settings') { loadEmployeesList(); loadActivityLog(true); }
+    if (tab === 'settings') { loadEmployeesList(); loadActivityLog(true); renderTrash(); updateNotificationSettingsUI(); }
     if (tab === 'reports' && !document.getElementById('report-from-date').value) setReportRangeThisMonth();
   }
 
@@ -1860,10 +1970,11 @@
           projects: data.projects || [],
           clients: data.clients || [],
           suppliers: data.suppliers || [],
-          quotes: data.quotes || []
+          quotes: data.quotes || [],
+          trash: data.trash || []
         };
       } else {
-        state = { invoices: [], expenses: [], projects: [], clients: [], suppliers: [], quotes: [] };
+        state = { invoices: [], expenses: [], projects: [], clients: [], suppliers: [], quotes: [], trash: [] };
         COMPANY_DOC.set(state).catch(() => {});
       }
       renderAll();
@@ -1969,6 +2080,7 @@
           onclick: 'goToDueSoonInvoices()'
         });
       }
+      maybeNotifyDueInvoices(overdueInvoices.length, dueSoonInvoices.length);
     }
 
     if (currentUserRole !== 'engineer') {
@@ -2406,8 +2518,10 @@
 
   function deleteClient(idx) {
     if (currentUserRole === 'accountant') return;
-    if (!confirm('حذف هذا العميل من الدليل؟ (فواتيره الحالية لن تتأثر)')) return;
-    const name = state.clients[idx]?.name || '';
+    if (!confirm('حذف هذا العميل من الدليل؟ (فواتيره الحالية لن تتأثر) يمكن استرجاعه لاحقًا من سلة المحذوفات.')) return;
+    const client = state.clients[idx];
+    const name = client?.name || '';
+    if (client) moveToTrash('clients', client, `عميل: ${name}`);
     state.clients.splice(idx, 1);
     logActivity('client', 'delete', `حذف عميل "${name}"`);
     persist(); renderAll();
@@ -2518,8 +2632,10 @@
 
   function deleteSupplier(idx) {
     if (currentUserRole === 'accountant') return;
-    if (!confirm('حذف هذا المورد من الدليل؟ (مصروفاته الحالية لن تتأثر)')) return;
-    const name = state.suppliers[idx]?.name || '';
+    if (!confirm('حذف هذا المورد من الدليل؟ (مصروفاته الحالية لن تتأثر) يمكن استرجاعه لاحقًا من سلة المحذوفات.')) return;
+    const supplier = state.suppliers[idx];
+    const name = supplier?.name || '';
+    if (supplier) moveToTrash('suppliers', supplier, `مورد: ${name}`);
     state.suppliers.splice(idx, 1);
     logActivity('supplier', 'delete', `حذف مورد "${name}"`);
     persist(); renderAll();
@@ -2776,7 +2892,9 @@
   }
 
   function deleteQuote(idx) {
-    if (!confirm('حذف عرض السعر هذا؟')) return;
+    if (!confirm('حذف عرض السعر هذا؟ يمكن استرجاعه لاحقًا من سلة المحذوفات.')) return;
+    const quote = state.quotes[idx];
+    if (quote) moveToTrash('quotes', quote, `عرض سعر: ${quote.num} — ${quote.client}`);
     state.quotes.splice(idx, 1);
     persist(); renderQuotes();
   }
@@ -2848,11 +2966,16 @@
 
   function pdfWrapEnd() {
     const now = new Date();
+    const companyInfoParts = [companyAddress, companyPhone ? `هاتف: ${companyPhone}` : '', companyTaxId ? `سجل تجاري/ضريبي: ${companyTaxId}` : ''].filter(Boolean);
+    const companyInfoHtml = companyInfoParts.length
+      ? `<div style="margin-top:6px;">${companyInfoParts.join(' &nbsp;|&nbsp; ')}</div>`
+      : '';
     return `
       </div>
-      <div style="text-align:center;color:#999;font-size:11px;padding:10px 0 20px;">
+      <div style="text-align:center;color:#999;font-size:11px;padding:10px 0 20px;border-top:1px solid #eee;margin-top:10px;">
         تم الإنشاء بواسطة: ${currentUserName}<br>
         ${fmtDate(now.toISOString().split('T')[0])} — ${now.toLocaleTimeString('ar-EG')}
+        ${companyInfoHtml}
       </div>
     </div>`;
   }
@@ -3518,7 +3641,7 @@
     }
 
     const data = pendingRestoreData;
-    state = { invoices: data.invoices || [], expenses: data.expenses || [], projects: data.projects || [], clients: data.clients || [], suppliers: data.suppliers || [], quotes: data.quotes || [] };
+    state = { invoices: data.invoices || [], expenses: data.expenses || [], projects: data.projects || [], clients: data.clients || [], suppliers: data.suppliers || [], quotes: data.quotes || [], trash: data.trash || [] };
     await persist();
     logActivity('backup', 'restore', `⚠️ استرجاع نسخة احتياطية بتاريخ ${fmtDate(data.createdAt ? data.createdAt.split('T')[0] : today())} — استُبدلت جميع بيانات الشركة`);
     renderAll();
@@ -3533,14 +3656,39 @@
   async function loadCompanySettings() {
     try {
       const doc = await SETTINGS_DOC.get();
-      companyLogo = doc.exists ? (doc.data().logoBase64 || '') : '';
-      maintenanceMode = !!(doc.exists && doc.data().maintenanceMode);
+      const d = doc.exists ? doc.data() : {};
+      companyLogo = d.logoBase64 || '';
+      companyAddress = d.address || '';
+      companyPhone = d.phone || '';
+      companyTaxId = d.taxId || '';
+      maintenanceMode = !!d.maintenanceMode;
     } catch(e) {
       companyLogo = '';
+      companyAddress = '';
+      companyPhone = '';
+      companyTaxId = '';
       maintenanceMode = false;
     }
     updateLogoPreview();
     updateMaintenanceUI();
+    const addrEl = document.getElementById('company-address');
+    if (addrEl) {
+      addrEl.value = companyAddress;
+      document.getElementById('company-phone').value = companyPhone;
+      document.getElementById('company-taxid').value = companyTaxId;
+    }
+  }
+
+  async function saveCompanyInfo() {
+    companyAddress = document.getElementById('company-address').value.trim();
+    companyPhone = document.getElementById('company-phone').value.trim();
+    companyTaxId = document.getElementById('company-taxid').value.trim();
+    try {
+      await SETTINGS_DOC.set({ address: companyAddress, phone: companyPhone, taxId: companyTaxId, updatedBy: currentUserName, updatedAt: new Date().toISOString() }, { merge: true });
+      alert('تم حفظ بيانات الشركة بنجاح.');
+    } catch(e) {
+      alert('تعذّر حفظ البيانات. حاول مرة أخرى.');
+    }
   }
 
   function updateLogoPreview() {
@@ -3981,6 +4129,81 @@
     openInvoiceDetail(invId);
   }
 
+  // ===== Trash bin (soft delete) =====
+  // Deleted items move here instead of disappearing immediately, so an accidental
+  // delete can be undone without restoring the entire company from a backup.
+  // Items are kept for 30 days, after which they're permanently purged automatically
+  // the next time the trash is opened (no server-side scheduling needed for this).
+  const TRASH_RETENTION_DAYS = 30;
+
+  // Moves an item into the trash array with enough metadata to display and restore it later.
+  function moveToTrash(listKey, item, displayLabel) {
+    state.trash.push({
+      id: uid(),
+      listKey,                          // which state array it came from (e.g. 'invoices')
+      displayLabel,                     // human-readable label shown in the trash list
+      data: item,                       // the original item itself, unmodified
+      deletedBy: currentUserName,
+      deletedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    });
+  }
+
+  // Removes any trash entries past their retention window. Called opportunistically
+  // (e.g. when opening the trash view) rather than on a schedule.
+  function purgeExpiredTrash() {
+    const now = Date.now();
+    const before = state.trash.length;
+    state.trash = state.trash.filter(t => new Date(t.expiresAt).getTime() > now);
+    return before !== state.trash.length;
+  }
+
+  function restoreFromTrash(trashId) {
+    const idx = state.trash.findIndex(t => t.id === trashId);
+    if (idx === -1) return;
+    const entry = state.trash[idx];
+    if (!state[entry.listKey]) { alert('تعذّر الاسترجاع: نوع العنصر غير معروف.'); return; }
+    state[entry.listKey].push(entry.data);
+    state.trash.splice(idx, 1);
+    logActivity('backup', 'create', `استرجاع "${entry.displayLabel}" من سلة المحذوفات`);
+    persist();
+    renderAll();
+    renderTrash();
+  }
+
+  function permanentlyDeleteFromTrash(trashId) {
+    if (!confirm('حذف هذا العنصر نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+    state.trash = state.trash.filter(t => t.id !== trashId);
+    persist();
+    renderTrash();
+  }
+
+  function renderTrash() {
+    const el = document.getElementById('trash-list');
+    if (!el) return;
+    const didPurge = purgeExpiredTrash();
+    if (didPurge) persist();
+
+    if (!state.trash.length) {
+      el.innerHTML = '<div class="empty-state">سلة المحذوفات فارغة.</div>';
+      return;
+    }
+    const typeLabels = { invoices: 'فاتورة', expenses: 'مصروف', projects: 'مشروع', clients: 'عميل', suppliers: 'مورد', quotes: 'عرض سعر' };
+    el.innerHTML = state.trash.slice().reverse().map(t => {
+      const daysLeft = Math.max(0, Math.ceil((new Date(t.expiresAt) - new Date()) / (1000*60*60*24)));
+      return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:700;font-size:13px">${t.displayLabel} <span style="font-size:11px;color:var(--text3)">(${typeLabels[t.listKey] || t.listKey})</span></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">حذفه ${t.deletedBy} — ${fmtDate(t.deletedAt.split('T')[0])} · يُحذف نهائيًا خلال ${daysLeft} يوم</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm btn-accent" onclick="restoreFromTrash('${t.id}')">استرجاع</button>
+          <button class="btn btn-sm btn-danger" onclick="permanentlyDeleteFromTrash('${t.id}')">حذف نهائي</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
   function deleteItem(type, id) {
     if (currentUserRole === 'accountant') return;
     if (currentUserRole === 'engineer') {
@@ -3988,10 +4211,11 @@
       const item = state[type].find(i => i.id === id);
       if (!item || !currentUserProjects.includes(item.project)) return;
     }
-    if (!confirm('هل تريد حذف هذا العنصر؟')) return;
+    if (!confirm('هل تريد حذف هذا العنصر؟ يمكن استرجاعه لاحقًا من سلة المحذوفات خلال 30 يومًا.')) return;
     const item = state[type].find(i => i.id === id);
     const typeLabels = { invoices: 'فاتورة', expenses: 'مصروف', projects: 'مشروع' };
     const itemLabel = item ? (item.num || item.desc || item.name || '') : '';
+    if (item) moveToTrash(type, item, `${typeLabels[type] || type}: ${itemLabel}`);
     state[type] = state[type].filter(i => i.id !== id);
     logActivity(type === 'invoices' ? 'invoice' : type === 'expenses' ? 'expense' : 'project', 'delete', `حذف ${typeLabels[type] || type}${itemLabel ? ' "' + itemLabel + '"' : ''}`);
     persist(); renderAll();
