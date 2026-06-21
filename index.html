@@ -171,7 +171,9 @@
 
     /* Login Screen */
     #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 1.5rem; }
+    #reauth-gate-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 1.5rem; }
     #login-screen.hidden { display: none; }
+    #reauth-gate-screen.hidden { display: none; }
     .login-box { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 380px; }
     .login-logo { text-align: center; margin-bottom: 1.5rem; }
     .login-logo div:first-child { font-size: 28px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
@@ -226,6 +228,29 @@
       </div>
       <div class="login-loading" id="login-loading">جارٍ تسجيل الدخول…</div>
       <button class="btn-login" id="login-submit-btn" onclick="doLogin()">تسجيل الدخول</button>
+    </div>
+  </div>
+</div>
+
+<!-- شاشة تأكيد كلمة المرور (تظهر بدل الدخول التلقائي عند فتح جلسة محفوظة وأنت متصل بالإنترنت) -->
+<div id="reauth-gate-screen" class="hidden">
+  <div class="login-box">
+    <div class="login-logo">
+      <div>Artash</div>
+      <div>تأكيد الهوية للمتابعة</div>
+    </div>
+    <div class="login-form">
+      <div class="login-error" id="reauth-gate-error"></div>
+      <div class="form-group">
+        <label>الحساب</label>
+        <div id="reauth-gate-email" style="padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);font-size:14px;direction:ltr;text-align:left;color:var(--text2)"></div>
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="reauth-gate-password" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter')submitReauthGate()" />
+      </div>
+      <button class="btn-login" onclick="submitReauthGate()">دخول</button>
+      <button class="btn" style="margin-top:10px;width:100%;" onclick="reauthGateUseAnotherAccount()">استخدام حساب آخر</button>
     </div>
   </div>
 </div>
@@ -448,6 +473,7 @@
           <div class="form-group"><label>كود المشروع</label><input id="prj-code" placeholder="يُنشأ تلقائيًا" /></div>
           <div class="form-group"><label>العميل</label><input id="prj-client" placeholder="اسم العميل" /></div>
           <div class="form-group"><label>الميزانية (جنيه)</label><input id="prj-budget" type="number" placeholder="0" /></div>
+          <div class="form-group"><label>رأس المال (جنيه)</label><input id="prj-capital" type="number" placeholder="0" /></div>
           <div class="form-group"><label>تاريخ البدء</label><input id="prj-start" type="date" /></div>
           <div class="form-group"><label>تاريخ التسليم المتوقع</label><input id="prj-expected-delivery" type="date" /></div>
           <div class="form-group full"><label>الحالة</label>
@@ -677,6 +703,7 @@
           <div class="form-group full"><label>العنوان</label><input id="company-address" placeholder="عنوان الشركة بالكامل" /></div>
           <div class="form-group"><label>رقم الهاتف</label><input id="company-phone" type="tel" placeholder="01xxxxxxxxx" /></div>
           <div class="form-group"><label>الرقم الضريبي / السجل التجاري</label><input id="company-taxid" placeholder="اختياري" /></div>
+          <div class="form-group full"><label>تنبيه عند عملية أكبر من (جنيه)</label><input id="large-transaction-threshold" type="number" placeholder="مثال: 50000 — اتركه فارغًا للتعطيل" /></div>
         </div>
         <button class="btn btn-accent btn-sm" onclick="saveCompanyInfo()">حفظ البيانات</button>
       </div>
@@ -723,9 +750,27 @@
 
       <div class="card">
         <div class="card-header">
+          <span class="card-title">🔒 حسابات مقفولة</span>
+        </div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">يُقفل أي حساب تلقائيًا بعد محاولات دخول فاشلة متكررة، ويحتاج فك القفل يدويًا من هنا قبل أن يستطيع صاحبه الدخول مرة أخرى.</p>
+        <div id="locked-accounts-list"><div class="empty-state">جارٍ التحميل…</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
           <span class="card-title">🗑️ سلة المحذوفات</span>
+          <button class="btn btn-sm btn-danger" onclick="openEmptyTrashConfirm()">إفراغ السلة بالكامل</button>
         </div>
         <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">أي عنصر تحذفه (فاتورة، مصروف، مشروع، عميل، مورد، عرض سعر) يبقى هنا لمدة 30 يومًا قبل حذفه نهائيًا، ويمكن استرجاعه في أي وقت خلال هذه الفترة.</p>
+        <div id="trash-empty-confirm" style="display:none;background:var(--red-bg);border:1px solid rgba(232,85,85,0.3);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;">
+          <div style="font-size:13px;color:var(--red);margin-bottom:10px;">⚠️ سيتم حذف كل محتويات سلة المحذوفات نهائيًا ولن يمكن التراجع. أدخل كلمة مرورك للتأكيد:</div>
+          <input type="password" id="trash-empty-password" placeholder="كلمة المرور" style="margin-bottom:8px;" />
+          <div id="trash-empty-err"></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-danger btn-sm" onclick="confirmEmptyTrash()">تأكيد الإفراغ نهائيًا</button>
+            <button class="btn btn-sm" onclick="document.getElementById('trash-empty-confirm').style.display='none'">إلغاء</button>
+          </div>
+        </div>
         <div id="trash-list"><div class="empty-state">جارٍ التحميل…</div></div>
       </div>
 
@@ -889,6 +934,7 @@
           <option value="accountant">محاسب (عرض فقط)</option>
           <option value="engineer">مهندس ميداني</option>
         </select>
+        <div id="emp-role-protected-note" style="display:none;font-size:11px;color:var(--text3);margin-top:6px;">🔒 دور IT محمي ولا يمكن تغييره من هذه الشاشة. لتغييره، احذف الحساب وأضفه من جديد بالدور المطلوب.</div>
       </div>
       <div class="form-group full" id="emp-project-group" style="display:none">
         <label>المشاريع المعيّنة * <span style="color:var(--text3);font-weight:400">(يمكن اختيار أكثر من مشروع)</span></label>
@@ -994,7 +1040,19 @@
     <div id="add-partner-share-err"></div>
     <div class="form-grid">
       <div class="form-group full"><label>الشريك *</label><select id="share-partner-select"></select></div>
-      <div class="form-group full"><label>نسبته في هذا المشروع (%) *</label><input id="share-percentage" type="number" min="0" max="100" placeholder="مثال: 25" /></div>
+      <div class="form-group full">
+        <label>طريقة تحديد النصيب *</label>
+        <select id="share-mode" onchange="onShareModeChange()">
+          <option value="percentage">نسبة مئوية مباشرة</option>
+          <option value="capital">مبلغ رأس مال (يُحسب كنسبة من رأس مال المشروع)</option>
+        </select>
+      </div>
+      <div class="form-group full" id="share-percentage-group"><label>نسبته في هذا المشروع (%) *</label><input id="share-percentage" type="number" min="0" max="100" placeholder="مثال: 25" /></div>
+      <div class="form-group full" id="share-capital-group" style="display:none">
+        <label>مبلغ مساهمته في رأس المال (جنيه) *</label>
+        <input id="share-capital-amount" type="number" placeholder="مثال: 1000000" oninput="updateShareCapitalPreview()" />
+        <div id="share-capital-preview" style="font-size:11px;color:var(--text3);margin-top:6px;"></div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-accent" onclick="saveAddPartnerShare()">إضافة</button>
@@ -1022,7 +1080,8 @@
 <!-- حاسبة عرض سعر سريع -->
 <div class="modal-overlay" id="modal-estimate">
   <div class="modal">
-    <div class="modal-title">عرض سعر سريع</div>
+    <div class="modal-title" id="estimate-modal-title">عرض سعر سريع</div>
+    <input type="hidden" id="quote-edit-id" value="" />
     <div class="form-grid">
       <div class="form-group full"><label>اسم العميل</label><input id="est-client" placeholder="اسم العميل (اختياري)" /></div>
     </div>
@@ -1033,8 +1092,19 @@
       <span id="estimate-total" style="font-size:18px;font-weight:700;color:var(--accent)">٠</span>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-accent" onclick="exportEstimatePDF()">تصدير PDF</button>
+      <button class="btn btn-accent" onclick="exportEstimatePDF()">حفظ وتصدير PDF</button>
       <button class="btn" onclick="closeModal('estimate')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة مقارنة عروض الأسعار -->
+<div class="modal-overlay" id="modal-compare-quotes">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-title">مقارنة عروض الأسعار</div>
+    <div id="compare-quotes-content" style="overflow-x:auto;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('compare-quotes')">إغلاق</button>
     </div>
   </div>
 </div>
@@ -1081,6 +1151,7 @@
   let companyAddress = '';
   let companyPhone = '';
   let companyTaxId = '';
+  let largeTransactionThreshold = 0; // 0 = disabled
 
   // Deep link support: scanning a QR code on a printed invoice opens it directly,
   // e.g. https://.../?invoice=abc123 — handled once the user is logged in and data has synced.
@@ -1130,39 +1201,90 @@
   auth.onAuthStateChanged(async user => {
     if (user) {
       currentUser = user;
-      // Get user profile (name, role, assignedProjects) from Firestore users collection
-      try {
-        const doc = await db.collection('users').doc(user.uid).get();
-        if (doc.exists) {
-          const d = doc.data();
-          currentUserName = d.name || user.email;
-          currentUserRole = (d.role || 'accountant').trim().toLowerCase();
-          currentUserProjects = readAssignedProjects(d);
-        } else {
-          currentUserName = user.email;
-          currentUserRole = 'accountant';
-          currentUserProjects = [];
-        }
-      } catch(e) {
-        currentUserName = user.email;
-        currentUserRole = 'accountant';
-        currentUserProjects = [];
+      // If this is a cached/persisted session being silently restored (not a password
+      // just typed into the form a moment ago) AND the device is online, require the
+      // password again before showing the app — this is what stops a desktop shortcut
+      // from opening straight into the app with no password prompt. When OFFLINE, skip
+      // this gate and proceed directly, since there's no way to verify a password without
+      // a network call, and offline access for field engineers must keep working.
+      const justAuthenticated = sessionStorage.getItem('artash_just_authenticated');
+      if (justAuthenticated) {
+        sessionStorage.removeItem('artash_just_authenticated');
+      } else if (navigator.onLine) {
+        showReauthGate(user);
+        return;
       }
-      document.getElementById('user-display').textContent = `أهلاً، ${currentUserName}`;
-      document.getElementById('login-screen').classList.add('hidden');
-      applyRolePermissions();
-      if (currentUserRole !== 'it') loadMaintenanceMode();
-      setupSync();
-      recordLoginAndCheckDevice(user.uid);
-      resetInactivityTimer();
+      await completeLoginFlow(user);
     } else {
       currentUser = null;
       clearTimeout(inactivityTimer);
       if (unsubscribeSync) { unsubscribeSync(); unsubscribeSync = null; }
       autoBackupChecked = false;
       document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('reauth-gate-screen').classList.add('hidden');
     }
   });
+
+  async function completeLoginFlow(user) {
+    // Get user profile (name, role, assignedProjects) from Firestore users collection
+    try {
+      const doc = await db.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        const d = doc.data();
+        currentUserName = d.name || user.email;
+        currentUserRole = (d.role || 'accountant').trim().toLowerCase();
+        currentUserProjects = readAssignedProjects(d);
+      } else {
+        currentUserName = user.email;
+        currentUserRole = 'accountant';
+        currentUserProjects = [];
+      }
+    } catch(e) {
+      currentUserName = user.email;
+      currentUserRole = 'accountant';
+      currentUserProjects = [];
+    }
+    document.getElementById('user-display').textContent = `أهلاً، ${currentUserName}`;
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('reauth-gate-screen').classList.add('hidden');
+    applyRolePermissions();
+    if (currentUserRole !== 'it') loadMaintenanceMode();
+    setupSync();
+    recordLoginAndCheckDevice(user.uid);
+    resetInactivityTimer();
+  }
+
+  // ===== Re-auth gate (password confirmation for a restored/cached session) =====
+
+  function showReauthGate(user) {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('reauth-gate-screen').classList.remove('hidden');
+    document.getElementById('reauth-gate-email').textContent = user.email;
+    document.getElementById('reauth-gate-password').value = '';
+    document.getElementById('reauth-gate-error').classList.remove('show');
+    setTimeout(() => document.getElementById('reauth-gate-password')?.focus(), 100);
+  }
+
+  async function submitReauthGate() {
+    const password = document.getElementById('reauth-gate-password').value;
+    const errEl = document.getElementById('reauth-gate-error');
+    errEl.classList.remove('show');
+    if (!password) { errEl.textContent = 'يرجى إدخال كلمة المرور.'; errEl.classList.add('show'); return; }
+    try {
+      const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+      await currentUser.reauthenticateWithCredential(credential);
+      await completeLoginFlow(currentUser);
+    } catch(e) {
+      errEl.textContent = e.code === 'auth/network-request-failed'
+        ? 'تعذّر الاتصال بالإنترنت للتحقق من كلمة المرور.'
+        : 'كلمة المرور غير صحيحة.';
+      errEl.classList.add('show');
+    }
+  }
+
+  function reauthGateUseAnotherAccount() {
+    auth.signOut();
+  }
 
   function applyRolePermissions() {
     const isAdmin = isAdminOrIT();           // admin OR it
@@ -1180,13 +1302,9 @@
     // Engineers can see the Projects tab, but renderProjects() restricts it to their own project
 
     // Add/create buttons
-    const newInvoiceBtn = document.getElementById('btn-new-invoice');
-    const newExpenseBtn = document.getElementById('btn-new-expense');
     const newProjectBtn = document.getElementById('btn-new-project');
     const newClientBtn = document.getElementById('btn-new-client');
     const newSupplierBtn = document.getElementById('btn-new-supplier');
-    if (newInvoiceBtn) newInvoiceBtn.style.display = isAccountant ? 'none' : '';
-    if (newExpenseBtn) newExpenseBtn.style.display = isAccountant ? 'none' : '';
     if (newProjectBtn) newProjectBtn.style.display = (isAccountant || isEngineer) ? 'none' : '';
     const newEstimateBtn = document.getElementById('btn-new-estimate');
     if (newEstimateBtn) newEstimateBtn.style.display = isAccountant ? 'none' : '';
@@ -1216,64 +1334,138 @@
   }
 
   // ===== Login attempt protection =====
-  // Firebase Auth already rate-limits repeated failed attempts server-side (surfaces as
-  // 'auth/too-many-requests'). This adds a lighter, friendlier client-side layer on top:
-  // after 5 failed attempts in this browser, the form locks for 60 seconds with a visible countdown.
-  const LOGIN_MAX_ATTEMPTS = 5;
-  const LOGIN_LOCKOUT_SECONDS = 60;
-  let loginFailedAttempts = Number(localStorage.getItem('artash_login_attempts') || 0);
-  let loginLockoutUntil = Number(localStorage.getItem('artash_login_lockout_until') || 0);
+  // Stored in Firestore (not just localStorage) so the lock applies to the ACCOUNT
+  // itself, not just one browser — someone retrying from a different device/private
+  // window is still blocked. This collection is open to unauthenticated reads/writes
+  // by necessity (the user isn't signed in yet during a login attempt), so it only
+  // ever stores a counter + timestamps tied to an email — no sensitive data. This is
+  // a best-effort deterrent layered on top of Firebase Auth's own server-side rate
+  // limiting, not a substitute for it; a determined attacker who calls the Firestore
+  // API directly (bypassing the app) could in principle reset it, since there's no
+  // backend code in this project to enforce it unbreakably.
+  //
+  // Flow: 3 failed attempts -> 60s cooldown. A failure AFTER that cooldown has
+  // expired -> permanent lock, which only an admin/IT can clear (Settings tab).
+  const LOGIN_LOCKOUTS_COL = db.collection('loginLockouts');
+  const LOGIN_COOLDOWN_THRESHOLD = 3;
+  const LOGIN_COOLDOWN_SECONDS = 60;
   let loginLockoutTimer = null;
 
-  function checkLoginLockout() {
-    const remaining = Math.ceil((loginLockoutUntil - Date.now()) / 1000);
-    if (remaining > 0) {
-      const btn = document.getElementById('login-submit-btn');
-      const errEl = document.getElementById('login-error');
-      if (btn) { btn.disabled = true; btn.textContent = `حاول بعد ${remaining} ثانية`; }
-      errEl.textContent = `تم تجاوز عدد المحاولات المسموح. حاول مرة أخرى بعد ${remaining} ثانية.`;
-      errEl.classList.add('show');
-      loginLockoutTimer = setTimeout(checkLoginLockout, 1000);
-      return true;
-    }
-    const btn = document.getElementById('login-submit-btn');
-    if (btn) { btn.disabled = false; btn.textContent = 'تسجيل الدخول'; }
-    return false;
-  }
-
-  function registerFailedLogin() {
-    loginFailedAttempts++;
-    localStorage.setItem('artash_login_attempts', loginFailedAttempts);
-    if (loginFailedAttempts >= LOGIN_MAX_ATTEMPTS) {
-      loginLockoutUntil = Date.now() + LOGIN_LOCKOUT_SECONDS * 1000;
-      localStorage.setItem('artash_login_lockout_until', loginLockoutUntil);
-      loginFailedAttempts = 0;
-      localStorage.setItem('artash_login_attempts', 0);
-      checkLoginLockout();
+  async function checkAccountLockout(email) {
+    try {
+      const doc = await LOGIN_LOCKOUTS_COL.doc(email).get();
+      if (!doc.exists) return { blocked: false };
+      const d = doc.data();
+      if (d.permanentlyLocked) {
+        return { blocked: true, permanent: true, message: 'تم قفل هذا الحساب بعد عدة محاولات فاشلة متكررة. تواصل مع المدير أو IT لفك القفل.' };
+      }
+      if (d.lockedUntil && d.lockedUntil > Date.now()) {
+        const remaining = Math.ceil((d.lockedUntil - Date.now()) / 1000);
+        return { blocked: true, remaining, message: `محاولات كثيرة فاشلة. حاول مرة أخرى بعد ${remaining} ثانية.` };
+      }
+      return { blocked: false };
+    } catch(e) {
+      return { blocked: false }; // fail open — never block login just because the check itself failed
     }
   }
 
-  function clearLoginAttempts() {
-    loginFailedAttempts = 0;
-    loginLockoutUntil = 0;
-    localStorage.removeItem('artash_login_attempts');
-    localStorage.removeItem('artash_login_lockout_until');
+  async function registerFailedLoginForEmail(email) {
+    try {
+      const ref = LOGIN_LOCKOUTS_COL.doc(email);
+      const doc = await ref.get();
+      const d = doc.exists ? doc.data() : {};
+      const hadCooldown = !!d.hadCooldown;
+      const cooldownExpired = d.lockedUntil && d.lockedUntil <= Date.now();
+
+      if (hadCooldown && cooldownExpired) {
+        // Failed again after already serving the 60s cooldown -> permanent lock.
+        await ref.set({ permanentlyLocked: true, lockedAt: new Date().toISOString(), email }, { merge: true });
+        logActivityUnauth(email);
+        return;
+      }
+      const newCount = (d.failedCount || 0) + 1;
+      if (newCount >= LOGIN_COOLDOWN_THRESHOLD) {
+        await ref.set({ failedCount: 0, hadCooldown: true, lockedUntil: Date.now() + LOGIN_COOLDOWN_SECONDS * 1000, email }, { merge: true });
+      } else {
+        await ref.set({ failedCount: newCount, email }, { merge: true });
+      }
+    } catch(e) { console.error('Lockout tracking error:', e); }
+  }
+
+  // Best-effort note in the activity log about a permanent lock — done without auth
+  // since the user isn't signed in yet; failures here are silently ignored.
+  function logActivityUnauth(email) {
+    ACTIVITY_COL.add({
+      type: 'employee', action: 'update',
+      description: `⚠️ تم قفل حساب "${email}" تلقائيًا بعد محاولات دخول فاشلة متكررة — يحتاج فك قفل من المدير`,
+      by: 'النظام', at: new Date().toISOString()
+    }).catch(() => {});
+  }
+
+  async function clearAccountLockout(email) {
+    try {
+      await LOGIN_LOCKOUTS_COL.doc(email).delete();
+      logActivity('employee', 'update', `فك قفل حساب "${email}"`);
+      loadLockedAccounts();
+    } catch(e) {
+      alert('تعذّر فك القفل. حاول مرة أخرى.');
+    }
+  }
+
+  async function loadLockedAccounts() {
+    const list = document.getElementById('locked-accounts-list');
+    if (!list) return;
+    list.innerHTML = '<div class="empty-state">جارٍ التحميل…</div>';
+    try {
+      const snap = await LOGIN_LOCKOUTS_COL.where('permanentlyLocked', '==', true).get();
+      if (snap.empty) {
+        list.innerHTML = '<div class="empty-state">لا توجد حسابات مقفولة حاليًا.</div>';
+        return;
+      }
+      list.innerHTML = snap.docs.map(d => {
+        const data = d.data();
+        return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <div>
+            <div style="font-weight:700;font-size:13px;color:var(--red)">${data.email || d.id}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${data.lockedAt ? 'قُفل في ' + fmtDate(data.lockedAt.split('T')[0]) : ''}</div>
+          </div>
+          <button class="btn btn-sm btn-accent" onclick="clearAccountLockout('${d.id}')">فك القفل</button>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      list.innerHTML = '<div class="empty-state">تعذّر تحميل قائمة الحسابات المقفولة.</div>';
+    }
   }
 
   async function doLogin() {
-    if (checkLoginLockout()) return;
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
     const errEl = document.getElementById('login-error');
     const loadEl = document.getElementById('login-loading');
     errEl.classList.remove('show');
     if (!email || !password) { errEl.textContent = 'يرجى إدخال البريد الإلكتروني وكلمة المرور.'; errEl.classList.add('show'); return; }
+
+    const lockStatus = await checkAccountLockout(email);
+    if (lockStatus.blocked) {
+      errEl.textContent = lockStatus.message;
+      errEl.classList.add('show');
+      const btn = document.getElementById('login-submit-btn');
+      if (lockStatus.remaining) {
+        btn.disabled = true;
+        clearTimeout(loginLockoutTimer);
+        loginLockoutTimer = setTimeout(() => { btn.disabled = false; errEl.classList.remove('show'); }, lockStatus.remaining * 1000);
+      }
+      return;
+    }
+
     loadEl.classList.add('show');
     try {
+      sessionStorage.setItem('artash_just_authenticated', '1');
       await auth.signInWithEmailAndPassword(email, password);
-      clearLoginAttempts();
+      localStorage.setItem('artash_remembered_email', email);
     } catch(e) {
       loadEl.classList.remove('show');
+      sessionStorage.removeItem('artash_just_authenticated');
       const msgs = {
         'auth/user-not-found': 'البريد الإلكتروني غير موجود.',
         'auth/wrong-password': 'كلمة المرور غير صحيحة.',
@@ -1285,7 +1477,7 @@
       errEl.textContent = msgs[e.code] || 'حدث خطأ، حاول مرة أخرى.';
       errEl.classList.add('show');
       if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found') {
-        registerFailedLogin();
+        await registerFailedLoginForEmail(email);
       }
     }
   }
@@ -1402,7 +1594,13 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !document.getElementById('login-screen').classList.contains('hidden')) doLogin();
   });
-  checkLoginLockout(); // resume countdown display if the page was refreshed mid-lockout
+  // Pre-fill the email field with the last successfully used email, for convenience —
+  // the password is never remembered, so this alone can't grant access.
+  const rememberedEmail = localStorage.getItem('artash_remembered_email');
+  if (rememberedEmail) {
+    const emailField = document.getElementById('login-email');
+    if (emailField) emailField.value = rememberedEmail;
+  }
 
   let state = { invoices: [], expenses: [], projects: [], clients: [], suppliers: [], quotes: [], trash: [], partners: [] };
   let deferredPrompt = null;
@@ -1729,7 +1927,7 @@
     document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('visible');
     btn.classList.add('active');
-    if (tab === 'settings') { loadEmployeesList(); loadActivityLog(true); renderTrash(); updateNotificationSettingsUI(); }
+    if (tab === 'settings') { loadEmployeesList(); loadActivityLog(true); renderTrash(); updateNotificationSettingsUI(); loadLockedAccounts(); }
     if (tab === 'reports' && !document.getElementById('report-from-date').value) setReportRangeThisMonth();
   }
 
@@ -1813,7 +2011,7 @@
   function setFormReadonly(type, readonly) {
     const ids = {
       invoice: ['inv-client','inv-num','inv-type','inv-project','inv-amount','inv-issue','inv-due','inv-notes'],
-      project: ['prj-name','prj-code','prj-client','prj-budget','prj-start','prj-expected-delivery','prj-status'],
+      project: ['prj-name','prj-code','prj-client','prj-budget','prj-capital','prj-start','prj-expected-delivery','prj-status'],
     }[type];
     ids.forEach(id => {
       const el = document.getElementById(id);
@@ -1923,6 +2121,7 @@
       document.getElementById('prj-code').value = generateProjectCode();
       document.getElementById('prj-client').value = '';
       document.getElementById('prj-budget').value = '';
+      document.getElementById('prj-capital').value = '';
       document.getElementById('prj-start').value = today();
       document.getElementById('prj-expected-delivery').value = '';
       document.getElementById('prj-status').value = 'نشط';
@@ -1945,6 +2144,7 @@
     document.getElementById('prj-code').value = p.code || '';
     document.getElementById('prj-client').value = p.client || '';
     document.getElementById('prj-budget').value = p.budget || '';
+    document.getElementById('prj-capital').value = p.capital || '';
     document.getElementById('prj-start').value = p.start || '';
     document.getElementById('prj-expected-delivery').value = p.expectedDelivery || '';
     document.getElementById('prj-status').value = p.status || 'نشط';
@@ -2065,6 +2265,7 @@
       <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>إجمالي المصروفات</span><strong style="color:var(--red)">${fmt(totalExp)}</strong></div>
       <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>صافي الربح التقديري</span><strong style="color:${netProfit >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(netProfit)}</strong></div>
       ${p.budget > 0 ? `<div style="display:flex;justify-content:space-between;"><span>الميزانية</span><strong>${fmt(p.budget)} ${pct !== null ? `(${pct}% منفق)` : ''}</strong></div>` : ''}
+      ${p.capital > 0 ? `<div style="display:flex;justify-content:space-between;margin-top:4px;"><span>رأس المال</span><strong>${fmt(p.capital)}</strong></div>` : ''}
       ${p.expectedDelivery ? `<div style="display:flex;justify-content:space-between;margin-top:4px;"><span>التسليم المتوقع</span><strong>${fmtDate(p.expectedDelivery)}</strong></div>` : ''}
       ${deliveryWarning}
     `;
@@ -2141,30 +2342,79 @@
     return months;
   }
 
+  let projectBreakdownView = 'monthly'; // 'monthly' or 'yearly', toggled via buttons in the UI
+
+  function setProjectBreakdownView(view) {
+    projectBreakdownView = view;
+    const projectId = document.getElementById('prj-edit-id').value;
+    const p = state.projects.find(x => x.id === projectId);
+    if (p) renderProjectMonthlyBreakdown(p);
+  }
+
   function renderProjectMonthlyBreakdown(p) {
     const el = document.getElementById('prj-monthly-breakdown');
     if (!el) return;
     const months = computeProjectMonthlyBreakdown(p);
-    const keys = Object.keys(months).sort();
-    if (!keys.length) {
-      el.innerHTML = '<div style="font-size:12px;color:var(--text3);">لا توجد حركة مالية مسجّلة بعد لعرضها شهريًا.</div>';
+    const monthKeys = Object.keys(months).sort();
+
+    const toggleHtml = `<div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button class="btn btn-sm ${projectBreakdownView==='monthly'?'btn-accent':''}" onclick="setProjectBreakdownView('monthly')">شهري</button>
+      <button class="btn btn-sm ${projectBreakdownView==='yearly'?'btn-accent':''}" onclick="setProjectBreakdownView('yearly')">سنوي</button>
+    </div>`;
+
+    if (!monthKeys.length) {
+      el.innerHTML = toggleHtml + '<div style="font-size:12px;color:var(--text3);">لا توجد حركة مالية مسجّلة بعد لعرضها.</div>';
       return;
     }
-    el.innerHTML = `<div class="table-wrap"><table>
-      <thead><tr><th>الشهر</th><th>اخدنا</th><th>علينا (مدفوع)</th><th>دفعنا</th><th>صافي الشهر</th></tr></thead>
+
+    // Group into years when the yearly view is selected.
+    let rows;
+    if (projectBreakdownView === 'yearly') {
+      const years = {};
+      monthKeys.forEach(key => {
+        const year = key.substring(0, 4);
+        if (!years[year]) years[year] = { collected: 0, alaynaPaid: 0, expenses: 0 };
+        years[year].collected += months[key].collected;
+        years[year].alaynaPaid += months[key].alaynaPaid;
+        years[year].expenses += months[key].expenses;
+      });
+      rows = Object.keys(years).sort().map(year => ({ label: year, m: years[year] }));
+    } else {
+      rows = monthKeys.map(key => ({
+        label: new Date(key + '-01').toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' }),
+        m: months[key]
+      }));
+    }
+
+    // Grand total across the whole project, regardless of which view is showing.
+    const total = { collected: 0, alaynaPaid: 0, expenses: 0 };
+    monthKeys.forEach(key => {
+      total.collected += months[key].collected;
+      total.alaynaPaid += months[key].alaynaPaid;
+      total.expenses += months[key].expenses;
+    });
+    const totalNet = total.collected - total.alaynaPaid - total.expenses;
+
+    el.innerHTML = toggleHtml + `<div class="table-wrap"><table>
+      <thead><tr><th>${projectBreakdownView==='yearly'?'السنة':'الشهر'}</th><th>اخدنا</th><th>علينا (مدفوع)</th><th>دفعنا</th><th>صافي</th></tr></thead>
       <tbody>
-        ${keys.map(key => {
-          const m = months[key];
-          const net = m.collected - m.alaynaPaid - m.expenses;
-          const label = new Date(key + '-01').toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
+        ${rows.map(r => {
+          const net = r.m.collected - r.m.alaynaPaid - r.m.expenses;
           return `<tr>
-            <td style="font-weight:700">${label}</td>
-            <td style="color:var(--green)">${fmt(m.collected)}</td>
-            <td style="color:#b06ad6">${m.alaynaPaid > 0 ? fmt(m.alaynaPaid) : '—'}</td>
-            <td style="color:var(--red)">${fmt(m.expenses)}</td>
+            <td style="font-weight:700">${r.label}</td>
+            <td style="color:var(--green)">${fmt(r.m.collected)}</td>
+            <td style="color:#b06ad6">${r.m.alaynaPaid > 0 ? fmt(r.m.alaynaPaid) : '—'}</td>
+            <td style="color:var(--red)">${fmt(r.m.expenses)}</td>
             <td style="font-weight:700;color:${net>=0?'var(--green)':'var(--red)'}">${fmt(net)}</td>
           </tr>`;
         }).join('')}
+        <tr style="border-top:2px solid var(--border2);">
+          <td style="font-weight:700;color:var(--accent)">الإجمالي</td>
+          <td style="font-weight:700;color:var(--green)">${fmt(total.collected)}</td>
+          <td style="font-weight:700;color:#b06ad6">${total.alaynaPaid > 0 ? fmt(total.alaynaPaid) : '—'}</td>
+          <td style="font-weight:700;color:var(--red)">${fmt(total.expenses)}</td>
+          <td style="font-weight:700;color:${totalNet>=0?'var(--green)':'var(--red)'}">${fmt(totalNet)}</td>
+        </tr>
       </tbody>
     </table></div>`;
   }
@@ -2197,6 +2447,7 @@
     html += rowHtml('إجمالي المصروفات', `<span style="color:#e85555">${fmt(totalExp)}</span>`);
     html += rowHtml('صافي الربح التقديري', `<strong style="color:${netProfit>=0?'#2ecc8a':'#e85555'}">${fmt(netProfit)}</strong>`);
     if (p.budget > 0) html += rowHtml('الميزانية', fmt(p.budget));
+    if (p.capital > 0) html += rowHtml('رأس المال', fmt(p.capital));
     if (p.expectedDelivery) html += rowHtml('التسليم المتوقع', fmtDate(p.expectedDelivery));
 
     if (invoices.length) {
@@ -2227,8 +2478,10 @@
         <thead><tr style="background:#f7f7f9;"><th style="padding:6px;text-align:right;">الشريك</th><th style="padding:6px;text-align:right;">النسبة</th><th style="padding:6px;text-align:right;">نصيبه</th></tr></thead><tbody>`;
       shares.forEach(sh => {
         const partner = state.partners.find(x => x.id === sh.partnerId);
-        const shareAmount = netProfit * (Number(sh.percentage) / 100);
-        html += `<tr><td style="padding:6px;border-bottom:1px solid #eee;">${partner ? partner.name : 'شريك محذوف'}</td><td style="padding:6px;border-bottom:1px solid #eee;">${sh.percentage}%</td><td style="padding:6px;border-bottom:1px solid #eee;color:#2ecc8a;font-weight:700;">${fmt(shareAmount)}</td></tr>`;
+        const pct = getPartnerSharePercentage(sh, p);
+        const shareAmount = netProfit * (pct / 100);
+        const pctLabel = pct.toFixed(1).replace(/\.0$/, '') + '%' + (sh.mode === 'capital' ? ` (مساهمة ${fmt(sh.capitalAmount)})` : '');
+        html += `<tr><td style="padding:6px;border-bottom:1px solid #eee;">${partner ? partner.name : 'شريك محذوف'}</td><td style="padding:6px;border-bottom:1px solid #eee;">${pctLabel}</td><td style="padding:6px;border-bottom:1px solid #eee;color:#2ecc8a;font-weight:700;">${fmt(shareAmount)}</td></tr>`;
       });
       html += `</tbody></table>`;
     }
@@ -2236,8 +2489,19 @@
     const months = computeProjectMonthlyBreakdown(p);
     const monthKeys = Object.keys(months).sort();
     if (monthKeys.length) {
+      // Grand total across the whole project life, used at the bottom of both tables.
+      const total = { collected: 0, alaynaPaid: 0, expenses: 0 };
+      monthKeys.forEach(key => {
+        total.collected += months[key].collected;
+        total.alaynaPaid += months[key].alaynaPaid;
+        total.expenses += months[key].expenses;
+      });
+      const totalNet = total.collected - total.alaynaPaid - total.expenses;
+      const totalRowHtml = `<tr style="border-top:2px solid #1a1a2e;"><td style="padding:6px;font-weight:700;">الإجمالي</td><td style="padding:6px;font-weight:700;color:#2ecc8a;">${fmt(total.collected)}</td><td style="padding:6px;font-weight:700;color:#b06ad6;">${total.alaynaPaid>0?fmt(total.alaynaPaid):'—'}</td><td style="padding:6px;font-weight:700;color:#e85555;">${fmt(total.expenses)}</td><td style="padding:6px;font-weight:700;color:${totalNet>=0?'#2ecc8a':'#e85555'};">${fmt(totalNet)}</td></tr>`;
+
+      // Monthly table
       html += `<div style="font-weight:700;color:#555;margin:18px 0 8px;">التقسيم الشهري</div>`;
-      html += `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+      html += `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;">
         <thead><tr style="background:#f7f7f9;"><th style="padding:6px;text-align:right;">الشهر</th><th style="padding:6px;text-align:right;">اخدنا</th><th style="padding:6px;text-align:right;">علينا (مدفوع)</th><th style="padding:6px;text-align:right;">دفعنا</th><th style="padding:6px;text-align:right;">صافي الشهر</th></tr></thead><tbody>`;
       monthKeys.forEach(key => {
         const m = months[key];
@@ -2245,7 +2509,31 @@
         const label = new Date(key + '-01').toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
         html += `<tr><td style="padding:6px;border-bottom:1px solid #eee;font-weight:600;">${label}</td><td style="padding:6px;border-bottom:1px solid #eee;color:#2ecc8a;">${fmt(m.collected)}</td><td style="padding:6px;border-bottom:1px solid #eee;color:#b06ad6;">${m.alaynaPaid>0?fmt(m.alaynaPaid):'—'}</td><td style="padding:6px;border-bottom:1px solid #eee;color:#e85555;">${fmt(m.expenses)}</td><td style="padding:6px;border-bottom:1px solid #eee;font-weight:700;color:${net>=0?'#2ecc8a':'#e85555'};">${fmt(net)}</td></tr>`;
       });
+      html += totalRowHtml;
       html += `</tbody></table>`;
+
+      // Yearly table (only worth showing if the project spans more than one year)
+      const years = {};
+      monthKeys.forEach(key => {
+        const year = key.substring(0, 4);
+        if (!years[year]) years[year] = { collected: 0, alaynaPaid: 0, expenses: 0 };
+        years[year].collected += months[key].collected;
+        years[year].alaynaPaid += months[key].alaynaPaid;
+        years[year].expenses += months[key].expenses;
+      });
+      const yearKeys = Object.keys(years).sort();
+      if (yearKeys.length > 1) {
+        html += `<div style="font-weight:700;color:#555;margin:18px 0 8px;">التقسيم السنوي</div>`;
+        html += `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:#f7f7f9;"><th style="padding:6px;text-align:right;">السنة</th><th style="padding:6px;text-align:right;">اخدنا</th><th style="padding:6px;text-align:right;">علينا (مدفوع)</th><th style="padding:6px;text-align:right;">دفعنا</th><th style="padding:6px;text-align:right;">صافي السنة</th></tr></thead><tbody>`;
+        yearKeys.forEach(year => {
+          const y = years[year];
+          const net = y.collected - y.alaynaPaid - y.expenses;
+          html += `<tr><td style="padding:6px;border-bottom:1px solid #eee;font-weight:600;">${year}</td><td style="padding:6px;border-bottom:1px solid #eee;color:#2ecc8a;">${fmt(y.collected)}</td><td style="padding:6px;border-bottom:1px solid #eee;color:#b06ad6;">${y.alaynaPaid>0?fmt(y.alaynaPaid):'—'}</td><td style="padding:6px;border-bottom:1px solid #eee;color:#e85555;">${fmt(y.expenses)}</td><td style="padding:6px;border-bottom:1px solid #eee;font-weight:700;color:${net>=0?'#2ecc8a':'#e85555'};">${fmt(net)}</td></tr>`;
+        });
+        html += totalRowHtml;
+        html += `</tbody></table>`;
+      }
     }
 
     html += pdfWrapEnd();
@@ -2973,6 +3261,18 @@
   // Withdrawals reduce the partner's running balance; a negative balance means the
   // partner has withdrawn more than their earned share (they owe the company — "عليه").
 
+  // Returns a partner's EFFECTIVE percentage share in a project, regardless of which
+  // mode it was defined in: a direct percentage, or a capital contribution amount
+  // (in which case it's derived as their share of the project's total capital).
+  function getPartnerSharePercentage(share, project) {
+    if (share.mode === 'capital') {
+      const capital = Number(project?.capital) || 0;
+      if (capital <= 0) return 0; // can't derive a percentage without a capital figure
+      return (Number(share.capitalAmount) / capital) * 100;
+    }
+    return Number(share.percentage) || 0;
+  }
+
   function partnerProjectBreakdown(partnerId) {
     return state.projects
       .map(p => {
@@ -2981,8 +3281,9 @@
         const pinv = state.invoices.filter(i => i.project === p.name).reduce((s, i) => s + invoiceNetAmount(i), 0);
         const pexp = state.expenses.filter(e => e.project === p.name).reduce((s, e) => s + Number(e.amount), 0);
         const netProfit = pinv - pexp;
-        const partnerShareAmount = netProfit * (Number(share.percentage) / 100);
-        return { project: p, percentage: Number(share.percentage), netProfit, partnerShareAmount };
+        const percentage = getPartnerSharePercentage(share, p);
+        const partnerShareAmount = netProfit * (percentage / 100);
+        return { project: p, percentage, share, netProfit, partnerShareAmount };
       })
       .filter(Boolean);
   }
@@ -3042,10 +3343,16 @@
       document.getElementById('partner-summary-section').style.display = '';
       const breakdownEl = document.getElementById('partner-projects-breakdown');
       breakdownEl.innerHTML = t.breakdown.length
-        ? t.breakdown.map(b => `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;display:flex;justify-content:space-between;align-items:center;">
-            <div style="font-size:12px;color:var(--text3)">${b.percentage}% × صافي ربح ${fmt(b.netProfit)}</div>
-            <div style="font-size:13px;font-weight:700">${b.project.name} <span style="color:var(--green)">(${fmt(b.partnerShareAmount)})</span></div>
-          </div>`).join('')
+        ? t.breakdown.map(b => {
+            const pctLabel = b.percentage.toFixed(1).replace(/\.0$/, '');
+            const modeNote = b.share.mode === 'capital'
+              ? `مساهمة ${fmt(b.share.capitalAmount)} من رأس مال ${fmt(b.project.capital||0)} = ${pctLabel}%`
+              : `${pctLabel}% × صافي ربح ${fmt(b.netProfit)}`;
+            return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;display:flex;justify-content:space-between;align-items:center;">
+              <div style="font-size:12px;color:var(--text3)">${modeNote}</div>
+              <div style="font-size:13px;font-weight:700">${b.project.name} <span style="color:var(--green)">(${fmt(b.partnerShareAmount)})</span></div>
+            </div>`;
+          }).join('')
         : '<div style="font-size:12px;color:var(--text3)">هذا الشريك غير مُشارك في أي مشروع حاليًا.</div>';
 
       const balanceLabel = t.netBalance >= 0 ? 'له (مستحق غير مسحوب)' : 'عليه (سحب أكثر من نصيبه)';
@@ -3142,6 +3449,7 @@
     if (!Array.isArray(p.withdrawals)) p.withdrawals = [];
     p.withdrawals.push({ id: uid(), amount, date, by: currentUserName, at: new Date().toISOString() });
     logActivity('partner', 'update', `سحب ${fmt(amount)} للشريك "${p.name}"`);
+    checkLargeTransaction(amount, `سحب شريك "${p.name}"`);
     persist();
     document.getElementById('partner-withdrawal-amount').value = '';
     openPartnerModal(state.partners.indexOf(p));
@@ -3229,15 +3537,20 @@
     const pinv = state.invoices.filter(i => i.project === p.name).reduce((s, i) => s + invoiceNetAmount(i), 0);
     const pexp = state.expenses.filter(e => e.project === p.name).reduce((s, e) => s + Number(e.amount), 0);
     const netProfit = pinv - pexp;
-    const totalPct = shares.reduce((s, sh) => s + Number(sh.percentage), 0);
+    const totalPct = shares.reduce((s, sh) => s + getPartnerSharePercentage(sh, p), 0);
 
     let html = shares.map(sh => {
       const partner = state.partners.find(x => x.id === sh.partnerId);
-      const shareAmount = netProfit * (Number(sh.percentage) / 100);
+      const pct = getPartnerSharePercentage(sh, p);
+      const shareAmount = netProfit * (pct / 100);
+      const pctLabel = pct.toFixed(1).replace(/\.0$/, '');
+      const subLabel = sh.mode === 'capital'
+        ? `مساهمة ${fmt(sh.capitalAmount)} من رأس المال (${pctLabel}%)`
+        : `${pctLabel}% × صافي الربح`;
       return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;display:flex;justify-content:space-between;align-items:center;">
         <div>
           <div style="font-size:13px;font-weight:700">${partner ? partner.name : 'شريك محذوف'}</div>
-          <div style="font-size:11px;color:var(--text3)">${sh.percentage}% × صافي الربح</div>
+          <div style="font-size:11px;color:var(--text3)">${subLabel}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:13px;font-weight:700;color:${shareAmount>=0?'var(--green)':'var(--red)'}">${fmt(shareAmount)}</div>
@@ -3246,8 +3559,12 @@
       </div>`;
     }).join('');
 
+    const hasUncomputedCapitalShare = shares.some(sh => sh.mode === 'capital' && (!p.capital || p.capital <= 0));
+    if (hasUncomputedCapitalShare) {
+      html = `<div style="font-size:12px;color:var(--amber);margin-bottom:6px;">⚠️ لم يتم تحديد "رأس المال" لهذا المشروع — نسب الشركاء المحسوبة من رأس المال ستظهر صفر% حتى يُحدَّد.</div>` + html;
+    }
     if (totalPct > 100) {
-      html = `<div style="font-size:12px;color:var(--red);margin-bottom:6px;">⚠️ مجموع نسب الشركاء في هذا المشروع ${totalPct}% (أكثر من 100%)</div>` + html;
+      html = `<div style="font-size:12px;color:var(--red);margin-bottom:6px;">⚠️ مجموع نسب الشركاء في هذا المشروع ${totalPct.toFixed(1).replace(/\.0$/,'')}% (أكثر من 100%)</div>` + html;
     }
     list.innerHTML = html;
   }
@@ -3259,6 +3576,9 @@
     document.getElementById('modal-add-partner-share').classList.add('open');
     document.getElementById('add-partner-share-err').innerHTML = '';
     document.getElementById('share-percentage').value = '';
+    document.getElementById('share-capital-amount').value = '';
+    document.getElementById('share-mode').value = 'percentage';
+    onShareModeChange();
     const p = state.projects.find(x => x.id === projectId);
     const alreadyAssigned = (p?.partnerShares || []).map(s => s.partnerId);
     const available = state.partners.filter(pt => !alreadyAssigned.includes(pt.id));
@@ -3268,19 +3588,57 @@
       : '<option value="">لا يوجد شركاء متاحون (أضف شريكًا جديدًا أولاً)</option>';
   }
 
+  function onShareModeChange() {
+    const mode = document.getElementById('share-mode').value;
+    document.getElementById('share-percentage-group').style.display = mode === 'percentage' ? '' : 'none';
+    document.getElementById('share-capital-group').style.display = mode === 'capital' ? '' : 'none';
+    if (mode === 'capital') updateShareCapitalPreview();
+  }
+
+  // Live preview of the effective percentage while typing a capital contribution amount.
+  function updateShareCapitalPreview() {
+    const projectId = document.getElementById('prj-edit-id').value;
+    const p = state.projects.find(x => x.id === projectId);
+    const amount = Number(document.getElementById('share-capital-amount').value) || 0;
+    const preview = document.getElementById('share-capital-preview');
+    const capital = Number(p?.capital) || 0;
+    if (capital <= 0) {
+      preview.textContent = '⚠️ لم يتم تحديد "رأس المال" لهذا المشروع بعد — حدّده من بيانات المشروع أولاً.';
+      preview.style.color = 'var(--amber)';
+    } else {
+      const pct = (amount / capital) * 100;
+      preview.textContent = `يعادل ${pct.toFixed(1).replace(/\.0$/,'')}% من رأس المال (${fmt(capital)})`;
+      preview.style.color = 'var(--text3)';
+    }
+  }
+
   function saveAddPartnerShare() {
     const projectId = document.getElementById('prj-edit-id').value;
     const p = state.projects.find(x => x.id === projectId);
     if (!p) return;
     const partnerId = document.getElementById('share-partner-select').value;
-    const percentage = Number(document.getElementById('share-percentage').value);
+    const mode = document.getElementById('share-mode').value;
     const errEl = document.getElementById('add-partner-share-err');
     if (!partnerId) { errEl.innerHTML = '<div class="error-msg">يرجى اختيار شريك.</div>'; return; }
-    if (!percentage || percentage <= 0 || percentage > 100) { errEl.innerHTML = '<div class="error-msg">يرجى إدخال نسبة صحيحة بين 1 و100.</div>'; return; }
+
+    let shareEntry;
+    let logNote;
+    if (mode === 'capital') {
+      const capitalAmount = Number(document.getElementById('share-capital-amount').value);
+      if (!capitalAmount || capitalAmount <= 0) { errEl.innerHTML = '<div class="error-msg">يرجى إدخال مبلغ مساهمة صحيح.</div>'; return; }
+      shareEntry = { partnerId, mode: 'capital', capitalAmount };
+      logNote = `مساهمة ${fmt(capitalAmount)} في رأس المال`;
+    } else {
+      const percentage = Number(document.getElementById('share-percentage').value);
+      if (!percentage || percentage <= 0 || percentage > 100) { errEl.innerHTML = '<div class="error-msg">يرجى إدخال نسبة صحيحة بين 1 و100.</div>'; return; }
+      shareEntry = { partnerId, mode: 'percentage', percentage };
+      logNote = `${percentage}%`;
+    }
+
     if (!p.partnerShares) p.partnerShares = [];
-    p.partnerShares.push({ partnerId, percentage });
+    p.partnerShares.push(shareEntry);
     const partner = state.partners.find(x => x.id === partnerId);
-    logActivity('project', 'update', `إضافة شريك "${partner ? partner.name : ''}" (${percentage}%) لمشروع "${p.name}"`);
+    logActivity('project', 'update', `إضافة شريك "${partner ? partner.name : ''}" (${logNote}) لمشروع "${p.name}"`);
     persist();
     renderProjectPartners(p);
     closeModal('add-partner-share');
@@ -3407,13 +3765,33 @@
 
   let estimateRowCount = 0;
 
-  function openEstimateModal() {
+  function openEstimateModal(quoteId) {
     document.getElementById('modal-estimate').classList.add('open');
-    document.getElementById('est-client').value = '';
     document.getElementById('estimate-rows').innerHTML = '';
     estimateRowCount = 0;
-    addEstimateRow();
-    addEstimateRow();
+
+    if (quoteId) {
+      const q = state.quotes.find(x => x.id === quoteId);
+      if (!q) return;
+      document.getElementById('estimate-modal-title').textContent = `تعديل عرض سعر — ${q.num}`;
+      document.getElementById('quote-edit-id').value = q.id;
+      document.getElementById('est-client').value = q.client === '—' ? '' : q.client;
+      (q.rows || []).forEach(r => {
+        addEstimateRow();
+        const rowId = estimateRowCount;
+        document.getElementById(`est-desc-${rowId}`).value = r.desc || '';
+        document.getElementById(`est-qty-${rowId}`).value = r.qty || '';
+        document.getElementById(`est-price-${rowId}`).value = r.price || '';
+      });
+      if (!(q.rows || []).length) { addEstimateRow(); addEstimateRow(); }
+      updateEstimateTotal();
+    } else {
+      document.getElementById('estimate-modal-title').textContent = 'عرض سعر سريع';
+      document.getElementById('quote-edit-id').value = '';
+      document.getElementById('est-client').value = '';
+      addEstimateRow();
+      addEstimateRow();
+    }
   }
 
   function addEstimateRow() {
@@ -3482,23 +3860,36 @@
     html += `<div style="margin-top:20px;font-size:11px;color:#999;">هذا عرض سعر مبدئي وغير ملزم، وقد يخضع للتعديل حسب الاتفاق النهائي.</div>`;
     html += pdfWrapEnd();
 
-    // Save to quote history before generating the PDF
-    const quoteNum = state.quotes.length + 1;
-    state.quotes.push({
-      id: uid(),
-      num: `QUO-${String(quoteNum).padStart(3,'0')}`,
-      client: client || '—',
-      total,
-      rows,
-      date: today(),
-      createdBy: currentUserName,
-      createdAt: new Date().toISOString()
-    });
+    const editId = document.getElementById('quote-edit-id').value;
+    let quoteNum;
+    if (editId) {
+      const q = state.quotes.find(x => x.id === editId);
+      if (q) {
+        Object.assign(q, { client: client || '—', total, rows, updatedBy: currentUserName, updatedAt: new Date().toISOString() });
+        quoteNum = q.num;
+        logActivity('invoice', 'update', `تعديل عرض سعر ${q.num} — ${client || '—'}`);
+      }
+    } else {
+      quoteNum = `QUO-${String(state.quotes.length + 1).padStart(3,'0')}`;
+      state.quotes.push({
+        id: uid(),
+        num: quoteNum,
+        client: client || '—',
+        total,
+        rows,
+        date: today(),
+        createdBy: currentUserName,
+        createdAt: new Date().toISOString()
+      });
+    }
     persist();
     renderQuotes();
+    closeModal('estimate');
 
     await renderHtmlToPdf(html, `quote-${client || 'عرض-سعر'}-${today()}.pdf`);
   }
+
+  let selectedQuoteIds = [];
 
   function renderQuotes() {
     const el = document.getElementById('quotes-list');
@@ -3506,18 +3897,29 @@
     const q = (document.getElementById('quotes-search')?.value || '').trim();
     let list = state.quotes.slice().reverse();
     if (q) list = list.filter(qt => smartMatch([qt.client, qt.num, ...( qt.rows||[]).map(r=>r.desc)].join(' '), q));
+
+    const compareBar = selectedQuoteIds.length >= 2
+      ? `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--blue-bg);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;">
+          <span style="font-size:13px;color:var(--blue)">${selectedQuoteIds.length} عروض محددة للمقارنة</span>
+          <button class="btn btn-sm btn-accent" onclick="compareSelectedQuotes()">مقارنة</button>
+        </div>`
+      : '';
+
     if (!list.length) {
-      el.innerHTML = `<div class="empty-state">${q ? 'لا توجد نتائج.' : 'لا توجد عروض أسعار بعد. اضغط "عرض سعر جديد" للبدء.'}</div>`;
+      el.innerHTML = compareBar + `<div class="empty-state">${q ? 'لا توجد نتائج.' : 'لا توجد عروض أسعار بعد. اضغط "عرض سعر جديد" للبدء.'}</div>`;
       return;
     }
     const canEdit = currentUserRole !== 'accountant';
-    el.innerHTML = list.map(qt => {
+    el.innerHTML = compareBar + list.map(qt => {
       const idx = state.quotes.findIndex(x => x.id === qt.id);
+      const isChecked = selectedQuoteIds.includes(qt.id);
       return `<div class="project-item">
         <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;">
-          <div style="display:flex;gap:6px;" onclick="event.stopPropagation()">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;" onclick="event.stopPropagation()">
+            <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleQuoteSelection('${qt.id}')" title="تحديد للمقارنة" style="width:16px;height:16px;" />
             <button class="btn btn-sm btn-pdf" onclick="reExportQuotePDF('${qt.id}')">PDF</button>
             <button class="btn btn-sm" onclick="shareInvoiceWhatsApp('${qt.id}','quote')">واتساب</button>
+            ${canEdit ? `<button class="btn btn-sm" onclick="openEstimateModal('${qt.id}')">تعديل</button>` : ''}
             ${canEdit ? `<button class="btn btn-sm btn-danger" onclick="deleteQuote(${idx})">حذف</button>` : ''}
           </div>
           <div style="text-align:right">
@@ -3531,6 +3933,47 @@
         </div>
       </div>`;
     }).join('');
+  }
+
+  function toggleQuoteSelection(id) {
+    if (selectedQuoteIds.includes(id)) selectedQuoteIds = selectedQuoteIds.filter(x => x !== id);
+    else selectedQuoteIds.push(id);
+    renderQuotes();
+  }
+
+  function compareSelectedQuotes() {
+    const quotes = state.quotes.filter(q => selectedQuoteIds.includes(q.id));
+    if (quotes.length < 2) return;
+    document.getElementById('modal-compare-quotes').classList.add('open');
+
+    // Union of every distinct item description across the selected quotes, so each
+    // row lines up across columns even if the quotes don't share identical line items.
+    const allDescs = [...new Set(quotes.flatMap(q => (q.rows || []).map(r => r.desc || '—')))];
+
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:${300 + quotes.length*140}px;">
+      <thead><tr style="background:var(--surface2);">
+        <th style="padding:8px;text-align:right;border-bottom:1px solid var(--border);">البند</th>
+        ${quotes.map(q => `<th style="padding:8px;text-align:right;border-bottom:1px solid var(--border);">${q.num}<div style="font-size:11px;font-weight:400;color:var(--text3)">${q.client}</div></th>`).join('')}
+      </tr></thead><tbody>`;
+
+    allDescs.forEach(desc => {
+      html += `<tr><td style="padding:8px;border-bottom:1px solid var(--border);color:var(--text2)">${desc}</td>`;
+      quotes.forEach(q => {
+        const row = (q.rows || []).find(r => (r.desc || '—') === desc);
+        html += `<td style="padding:8px;border-bottom:1px solid var(--border);">${row ? fmt(row.total) : '—'}</td>`;
+      });
+      html += `</tr>`;
+    });
+
+    html += `<tr style="border-top:2px solid var(--accent);">
+      <td style="padding:8px;font-weight:700;">الإجمالي</td>
+      ${quotes.map(q => `<td style="padding:8px;font-weight:700;color:var(--accent)">${fmt(q.total)}</td>`).join('')}
+    </tr></tbody></table>`;
+
+    const lowest = quotes.reduce((min, q) => q.total < min.total ? q : min, quotes[0]);
+    html += `<div style="margin-top:14px;font-size:13px;color:var(--green)">💡 أقل إجمالي: ${lowest.num} (${fmt(lowest.total)})</div>`;
+
+    document.getElementById('compare-quotes-content').innerHTML = html;
   }
 
   async function reExportQuotePDF(id) {
@@ -4342,12 +4785,14 @@
       companyAddress = d.address || '';
       companyPhone = d.phone || '';
       companyTaxId = d.taxId || '';
+      largeTransactionThreshold = Number(d.largeTransactionThreshold) || 0;
       maintenanceMode = !!d.maintenanceMode;
     } catch(e) {
       companyLogo = '';
       companyAddress = '';
       companyPhone = '';
       companyTaxId = '';
+      largeTransactionThreshold = 0;
       maintenanceMode = false;
     }
     updateLogoPreview();
@@ -4357,6 +4802,7 @@
       addrEl.value = companyAddress;
       document.getElementById('company-phone').value = companyPhone;
       document.getElementById('company-taxid').value = companyTaxId;
+      document.getElementById('large-transaction-threshold').value = largeTransactionThreshold || '';
     }
   }
 
@@ -4364,11 +4810,25 @@
     companyAddress = document.getElementById('company-address').value.trim();
     companyPhone = document.getElementById('company-phone').value.trim();
     companyTaxId = document.getElementById('company-taxid').value.trim();
+    largeTransactionThreshold = Number(document.getElementById('large-transaction-threshold').value) || 0;
     try {
-      await SETTINGS_DOC.set({ address: companyAddress, phone: companyPhone, taxId: companyTaxId, updatedBy: currentUserName, updatedAt: new Date().toISOString() }, { merge: true });
+      await SETTINGS_DOC.set({ address: companyAddress, phone: companyPhone, taxId: companyTaxId, largeTransactionThreshold, updatedBy: currentUserName, updatedAt: new Date().toISOString() }, { merge: true });
       alert('تم حفظ بيانات الشركة بنجاح.');
     } catch(e) {
       alert('تعذّر حفظ البيانات. حاول مرة أخرى.');
+    }
+  }
+
+  // Fires when any invoice/expense/withdrawal exceeds the configured threshold: logs a
+  // flagged activity entry (visible to admin/IT in the activity log regardless of who's
+  // currently online) and, if this device has notifications enabled, shows one immediately.
+  function checkLargeTransaction(amount, description) {
+    if (!largeTransactionThreshold || Number(amount) < largeTransactionThreshold) return;
+    logActivity('invoice', 'create', `🔴 عملية كبيرة (${fmt(Number(amount))}): ${description} — بواسطة ${currentUserName}`);
+    if (notificationsEnabled()) {
+      try {
+        new Notification('Artash — عملية مالية كبيرة', { body: `${description}\nالمبلغ: ${fmt(Number(amount))}\nبواسطة: ${currentUserName}`, icon: 'icons/icon-192.png' });
+      } catch(e) { console.error('Notification error:', e); }
     }
   }
 
@@ -4582,6 +5042,13 @@
       populateProjectCheckboxes(readAssignedProjects(u));
       document.getElementById('emp-email-group').style.display = 'none';
       document.getElementById('emp-password-group').style.display = 'none';
+      // IT accounts are protected: their role can never be changed through this screen,
+      // by anyone — including another admin or IT — so an IT account can't be silently
+      // demoted/locked out. To actually change an IT person's role, delete and re-add
+      // the account with the desired role.
+      const isProtectedIT = (u.role || '').trim().toLowerCase() === 'it';
+      document.getElementById('emp-role').disabled = isProtectedIT;
+      document.getElementById('emp-role-protected-note').style.display = isProtectedIT ? '' : 'none';
     } else {
       document.getElementById('emp-modal-title').textContent = 'إضافة موظف';
       document.getElementById('emp-edit-uid').value = '';
@@ -4589,6 +5056,8 @@
       document.getElementById('emp-email').value = '';
       document.getElementById('emp-password').value = '';
       document.getElementById('emp-role').value = 'accountant';
+      document.getElementById('emp-role').disabled = false;
+      document.getElementById('emp-role-protected-note').style.display = 'none';
       populateProjectCheckboxes([]);
       document.getElementById('emp-email-group').style.display = '';
       document.getElementById('emp-password-group').style.display = '';
@@ -4600,9 +5069,16 @@
     const errEl = document.getElementById('emp-err');
     errEl.innerHTML = '';
     const name = document.getElementById('emp-name').value.trim();
-    const role = document.getElementById('emp-role').value;
-    const assignedProjects = role === 'engineer' ? getSelectedProjectCheckboxes() : [];
+    let role = document.getElementById('emp-role').value;
     const editUid = document.getElementById('emp-edit-uid').value;
+
+    // Defense in depth: even if someone bypasses the disabled attribute via devtools,
+    // an existing IT account's role can never actually be changed through this function.
+    if (editUid) {
+      const existing = employeesCache.find(u => u.uid === editUid);
+      if (existing && (existing.role || '').trim().toLowerCase() === 'it') role = 'it';
+    }
+    const assignedProjects = role === 'engineer' ? getSelectedProjectCheckboxes() : [];
 
     if (!name) {
       errEl.innerHTML = '<div class="error-msg">يرجى إدخال اسم الموظف.</div>';
@@ -4732,6 +5208,7 @@
     } else {
       state.invoices.push({ id: uid(), num, type, client, project: projectVal, amount: Number(amount), issue: document.getElementById('inv-issue').value, due, notes: document.getElementById('inv-notes').value.trim(), payments: [], createdBy: currentUserName, createdAt: new Date().toISOString() });
       logActivity('invoice', 'create', `إضافة فاتورة ${num} (${type === 'alayna' ? 'دائن' : 'مدين'}) — ${client} (${fmt(Number(amount))})`);
+      checkLargeTransaction(amount, `فاتورة ${num} — ${client}`);
     }
     persist(); renderAll(); closeModal('invoice');
     refreshProjectDetailIfOpen();
@@ -4754,6 +5231,7 @@
     const supplier = document.getElementById('exp-supplier').value.trim();
     state.expenses.push({ id: uid(), desc, amount: Number(amount), date, category: document.getElementById('exp-cat').value, project: projectVal, supplier, createdBy: currentUserName, createdAt: new Date().toISOString() });
     logActivity('expense', 'create', `إضافة مصروف "${desc}" (${fmt(Number(amount))})`);
+    checkLargeTransaction(amount, `مصروف "${desc}"`);
     persist(); renderAll(); closeModal('expense');
     refreshProjectDetailIfOpen();
     ['exp-desc','exp-amount','exp-supplier'].forEach(id => document.getElementById(id).value = '');
@@ -4797,6 +5275,7 @@
       code,
       client: document.getElementById('prj-client').value.trim(),
       budget: Number(document.getElementById('prj-budget').value) || 0,
+      capital: Number(document.getElementById('prj-capital').value) || 0,
       start: document.getElementById('prj-start').value,
       expectedDelivery: document.getElementById('prj-expected-delivery').value,
       status: document.getElementById('prj-status').value
@@ -4937,6 +5416,41 @@
       </div>`;
     }).join('');
   }
+
+  function openEmptyTrashConfirm() {
+    if (!isAdminOrIT()) return;
+    if (!state.trash.length) { alert('سلة المحذوفات فارغة بالفعل.'); return; }
+    document.getElementById('trash-empty-confirm').style.display = '';
+    document.getElementById('trash-empty-password').value = '';
+    document.getElementById('trash-empty-err').innerHTML = '';
+  }
+
+  async function confirmEmptyTrash() {
+    const password = document.getElementById('trash-empty-password').value;
+    const errEl = document.getElementById('trash-empty-err');
+    errEl.innerHTML = '';
+    if (!password) {
+      errEl.innerHTML = '<div class="error-msg">يرجى إدخال كلمة المرور.</div>';
+      return;
+    }
+    try {
+      // Re-authenticate against the real account password — same protection pattern
+      // used for restoring a backup, since emptying the trash is just as irreversible.
+      const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+      await currentUser.reauthenticateWithCredential(credential);
+    } catch(e) {
+      errEl.innerHTML = '<div class="error-msg">كلمة المرور غير صحيحة. لم يتم حذف أي شيء.</div>';
+      return;
+    }
+    const count = state.trash.length;
+    state.trash = [];
+    logActivity('backup', 'delete', `⚠️ إفراغ سلة المحذوفات بالكامل (${count} عنصر) نهائيًا`);
+    persist();
+    renderTrash();
+    document.getElementById('trash-empty-confirm').style.display = 'none';
+    alert('تم إفراغ سلة المحذوفات نهائيًا.');
+  }
+
 
   function deleteItem(type, id) {
     if (currentUserRole === 'accountant') return;
