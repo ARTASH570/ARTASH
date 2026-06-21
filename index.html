@@ -88,6 +88,8 @@
 
     .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 1.25rem; }
     @media (min-width: 600px) { .metrics { grid-template-columns: repeat(4, 1fr); } }
+    .prj-two-col { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 700px) { .prj-two-col { grid-template-columns: 1fr 1fr; } }
     .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
     .metric-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; font-weight: 600; }
     .metric-value { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
@@ -263,14 +265,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       الرئيسية
     </button>
-    <button id="nav-invoices" onclick="showTab('invoices', this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      الفواتير
-    </button>
-    <button id="nav-expenses" onclick="showTab('expenses', this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-      المصروفات
-    </button>
     <button id="nav-projects" onclick="showTab('projects', this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
       المشاريع
@@ -282,6 +276,10 @@
     <button id="nav-suppliers" onclick="showTab('suppliers', this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
       الموردين
+    </button>
+    <button id="nav-partners" onclick="showTab('partners', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/><circle cx="9" cy="7" r="4"/></svg>
+      الشركاء
     </button>
     <button id="nav-reports" onclick="showTab('reports', this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -308,9 +306,9 @@
       <div id="alerts-container"></div>
       <div class="metrics">
         <div class="metric">
-          <div class="metric-label">إجمالي الفواتير</div>
+          <div class="metric-label">إجمالي مدين</div>
           <div class="metric-value" id="m-invoiced" style="color:var(--blue)">—</div>
-          <div class="metric-sub">جميع الفواتير</div>
+          <div class="metric-sub">مستحق من العملاء</div>
         </div>
         <div class="metric">
           <div class="metric-label">المحصّل</div>
@@ -321,6 +319,11 @@
           <div class="metric-label">المعلّق</div>
           <div class="metric-value" id="m-pending" style="color:var(--amber)">—</div>
           <div class="metric-sub">في انتظار السداد</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">إجمالي دائن</div>
+          <div class="metric-value" id="m-alayna" style="color:#b06ad6">—</div>
+          <div class="metric-sub">التزامات/مرتجعات</div>
         </div>
         <div class="metric">
           <div class="metric-label">المصروفات</div>
@@ -363,113 +366,6 @@
     </div>
 
     <!-- الفواتير -->
-    <div id="tab-invoices" class="section">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">الفواتير</span>
-          <button class="btn btn-accent" id="btn-new-invoice" onclick="openModal('invoice')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            فاتورة جديدة
-          </button>
-        </div>
-        <div class="toolbar-row">
-          <div class="search-wrap">
-            <input type="text" class="search-input" id="inv-search" placeholder="بحث برقم الفاتورة أو اسم العميل…" oninput="renderInvoices()" />
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </div>
-          <select id="inv-status-filter" onchange="renderInvoices()" style="max-width:140px">
-            <option value="">كل الحالات</option>
-            <option value="paid">مدفوعة</option>
-            <option value="partial">مدفوعة جزئيًا</option>
-            <option value="pending">معلّقة</option>
-            <option value="overdue">متأخرة</option>
-          </select>
-        </div>
-        <div class="toolbar-row">
-          <div class="form-group" style="flex:1;min-width:130px">
-            <label style="font-size:11px">من تاريخ</label>
-            <input type="date" id="inv-date-from" onchange="renderInvoices()" />
-          </div>
-          <div class="form-group" style="flex:1;min-width:130px">
-            <label style="font-size:11px">إلى تاريخ</label>
-            <input type="date" id="inv-date-to" onchange="renderInvoices()" />
-          </div>
-          <button class="btn btn-sm" style="align-self:flex-end" onclick="clearInvoiceFilters()">مسح الفلاتر</button>
-        </div>
-        <div class="toolbar-row">
-          <button class="btn btn-pdf" onclick="exportInvoicesPDF()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            تصدير القائمة PDF
-          </button>
-          <button class="btn btn-pdf" onclick="exportInvoicesExcel()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            تصدير Excel
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>رقم الفاتورة</th><th>العميل</th><th>المبلغ</th><th>تاريخ الاستحقاق</th><th>الحالة</th><th></th></tr></thead>
-            <tbody id="invoice-table"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- المصروفات -->
-    <div id="tab-expenses" class="section">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">المصروفات</span>
-          <button class="btn btn-accent" id="btn-new-expense" onclick="openModal('expense')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            إضافة مصروف
-          </button>
-        </div>
-        <div class="toolbar-row">
-          <div class="search-wrap">
-            <input type="text" class="search-input" id="exp-search" placeholder="بحث بالوصف أو الفئة أو المشروع…" oninput="renderExpenses()" />
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </div>
-          <select id="exp-cat-filter" onchange="renderExpenses()" style="max-width:140px">
-            <option value="">كل الفئات</option>
-            <option value="مواد">مواد</option>
-            <option value="عمالة">عمالة</option>
-            <option value="معدات">معدات</option>
-            <option value="نقل">نقل</option>
-            <option value="تصاريح">تصاريح</option>
-            <option value="أخرى">أخرى</option>
-          </select>
-        </div>
-        <div class="toolbar-row">
-          <div class="form-group" style="flex:1;min-width:130px">
-            <label style="font-size:11px">من تاريخ</label>
-            <input type="date" id="exp-date-from" onchange="renderExpenses()" />
-          </div>
-          <div class="form-group" style="flex:1;min-width:130px">
-            <label style="font-size:11px">إلى تاريخ</label>
-            <input type="date" id="exp-date-to" onchange="renderExpenses()" />
-          </div>
-          <button class="btn btn-sm" style="align-self:flex-end" onclick="clearExpenseFilters()">مسح الفلاتر</button>
-        </div>
-        <div class="toolbar-row">
-          <button class="btn btn-pdf" onclick="exportExpensesPDF()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            تصدير القائمة PDF
-          </button>
-          <button class="btn btn-pdf" onclick="exportExpensesExcel()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            تصدير Excel
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>التاريخ</th><th>الوصف</th><th>الفئة</th><th>المشروع</th><th>المبلغ</th><th></th></tr></thead>
-            <tbody id="expense-table"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
     <!-- المشاريع -->
     <div id="tab-projects" class="section">
       <div class="card">
@@ -477,7 +373,7 @@
           <span class="card-title">المشاريع</span>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-sm" id="btn-new-estimate" onclick="openEstimateModal()">عرض سعر سريع</button>
-            <button class="btn btn-accent" id="btn-new-project" onclick="openModal('project')">
+            <button class="btn btn-accent" id="btn-new-project" onclick="openProjectDetail(null)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               مشروع جديد
             </button>
@@ -490,6 +386,82 @@
           </div>
         </div>
         <div id="project-list"></div>
+      </div>
+    </div>
+
+    <!-- صفحة تفاصيل المشروع الكاملة (تفتح بدل نافذة منبثقة صغيرة) -->
+    <div id="tab-project-detail" class="section">
+      <div class="card">
+        <div class="card-header" style="flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="btn btn-sm" onclick="closeProjectDetailPage()">→ رجوع للمشاريع</button>
+            <span class="card-title" id="prj-page-title">مشروع جديد</span>
+            <span id="prj-page-code-badge" style="font-size:11px;color:var(--text3);background:var(--surface2);padding:3px 10px;border-radius:20px;"></span>
+          </div>
+          <div id="prj-page-actions" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+        </div>
+        <input type="hidden" id="prj-edit-id" value="" />
+        <div id="prj-err"></div>
+
+        <div id="prj-financials-section" style="display:none;margin-bottom:18px;">
+          <div id="prj-financial-summary" style="font-size:13px;color:var(--text2);background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;"></div>
+          <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
+            <button class="btn btn-sm btn-accent" id="prj-add-invoice-btn" onclick="quickAddForProject('invoice')">+ فاتورة لهذا المشروع</button>
+            <button class="btn btn-sm btn-accent" id="prj-add-expense-btn" onclick="quickAddForProject('expense')">+ مصروف لهذا المشروع</button>
+            <button class="btn btn-sm btn-pdf" id="prj-handover-btn" onclick="exportProjectHandoverPDF(document.getElementById('prj-edit-id').value)">إيصال تسليم</button>
+          </div>
+
+          <div class="prj-two-col" style="margin-bottom:18px;" id="prj-two-col-lists">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px;">فواتير المشروع</div>
+              <div id="prj-invoices-list" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px;">مصروفات المشروع</div>
+              <div id="prj-expenses-list" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
+            </div>
+          </div>
+
+          <div id="prj-monthly-section" style="margin-bottom:18px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px;">التقسيم الشهري</div>
+            <div id="prj-monthly-breakdown"></div>
+          </div>
+
+          <div id="prj-members-section" style="display:none;margin-bottom:18px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px;">المهندسون المعينون على هذا المشروع</div>
+            <div id="prj-members-list" style="font-size:13px;color:var(--text2);background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;">—</div>
+          </div>
+
+          <div id="prj-partners-section" style="margin-bottom:18px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <span style="font-size:13px;font-weight:700;color:var(--text2);">الشركاء ونسبهم في هذا المشروع</span>
+              <button class="btn btn-sm" id="prj-add-partner-btn" onclick="openAddPartnerShareModal()">+ إضافة شريك</button>
+            </div>
+            <div id="prj-partners-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+        </div>
+
+        <div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:10px;border-top:1px solid var(--border);padding-top:14px;">بيانات المشروع</div>
+        <div class="form-grid">
+          <div class="form-group full"><label>اسم المشروع *</label><input id="prj-name" placeholder="مثال: فيلا القاهرة الجديدة #12" /></div>
+          <div class="form-group"><label>كود المشروع</label><input id="prj-code" placeholder="يُنشأ تلقائيًا" /></div>
+          <div class="form-group"><label>العميل</label><input id="prj-client" placeholder="اسم العميل" /></div>
+          <div class="form-group"><label>الميزانية (جنيه)</label><input id="prj-budget" type="number" placeholder="0" /></div>
+          <div class="form-group"><label>تاريخ البدء</label><input id="prj-start" type="date" /></div>
+          <div class="form-group"><label>تاريخ التسليم المتوقع</label><input id="prj-expected-delivery" type="date" /></div>
+          <div class="form-group full"><label>الحالة</label>
+            <select id="prj-status">
+              <option value="نشط">نشط</option>
+              <option value="مكتمل">مكتمل</option>
+              <option value="متوقف">متوقف</option>
+            </select>
+          </div>
+        </div>
+        <div id="prj-audit-section" style="display:none;margin-top:14px;font-size:12px;color:var(--text3);border-top:1px solid var(--border);padding-top:12px;"></div>
+        <div class="modal-actions">
+          <button class="btn btn-accent" id="prj-save-btn" onclick="saveProject()">حفظ المشروع</button>
+          <button class="btn btn-danger" id="prj-delete-btn" onclick="deleteProjectFromPage()" style="display:none">حذف المشروع</button>
+        </div>
       </div>
     </div>
 
@@ -533,6 +505,21 @@
       </div>
     </div>
 
+    <!-- الشركاء (المدير وIT فقط) -->
+    <div id="tab-partners" class="section">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">الشركاء</span>
+          <button class="btn btn-accent" id="btn-new-partner" onclick="openPartnerModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            شريك جديد
+          </button>
+        </div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">نسبة كل شريك تُحدَّد لكل مشروع على حدة من داخل صفحة المشروع نفسه. هذه القائمة تعرض الرصيد الإجمالي لكل شريك عبر كل المشاريع.</p>
+        <div id="partners-list"></div>
+      </div>
+    </div>
+
     <!-- التقارير (المدير والمحاسب) -->
     <div id="tab-reports" class="section">
       <div class="card">
@@ -550,6 +537,90 @@
         </div>
         <div class="modal-actions">
           <button class="btn btn-accent" onclick="exportTaxReportPDF()">تصدير التقرير</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">نظرة عامة على الفواتير</span>
+        </div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">عرض شامل لكل فواتير الشركة عبر كل المشاريع. لإضافة فاتورة جديدة، ادخل المشروع المطلوب أولاً.</p>
+        <div class="toolbar-row">
+          <div class="search-wrap">
+            <input type="text" class="search-input" id="inv-search" placeholder="بحث برقم الفاتورة أو اسم العميل…" oninput="renderInvoices()" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <select id="inv-status-filter" onchange="renderInvoices()" style="max-width:140px">
+            <option value="">كل الحالات</option>
+            <option value="paid">مدفوعة</option>
+            <option value="partial">مدفوعة جزئيًا</option>
+            <option value="pending">معلّقة</option>
+            <option value="overdue">متأخرة</option>
+          </select>
+        </div>
+        <div class="toolbar-row">
+          <div class="form-group" style="flex:1;min-width:130px">
+            <label style="font-size:11px">من تاريخ</label>
+            <input type="date" id="inv-date-from" onchange="renderInvoices()" />
+          </div>
+          <div class="form-group" style="flex:1;min-width:130px">
+            <label style="font-size:11px">إلى تاريخ</label>
+            <input type="date" id="inv-date-to" onchange="renderInvoices()" />
+          </div>
+          <button class="btn btn-sm" style="align-self:flex-end" onclick="clearInvoiceFilters()">مسح الفلاتر</button>
+        </div>
+        <div class="toolbar-row">
+          <button class="btn btn-pdf" onclick="exportInvoicesPDF()">تصدير القائمة PDF</button>
+          <button class="btn btn-pdf" onclick="exportInvoicesExcel()">تصدير Excel</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>رقم الفاتورة</th><th>العميل</th><th>المبلغ</th><th>تاريخ الاستحقاق</th><th>الحالة</th><th></th></tr></thead>
+            <tbody id="invoice-table"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">نظرة عامة على المصروفات</span>
+        </div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">عرض شامل لكل مصروفات الشركة عبر كل المشاريع. لإضافة مصروف جديد، ادخل المشروع المطلوب أولاً.</p>
+        <div class="toolbar-row">
+          <div class="search-wrap">
+            <input type="text" class="search-input" id="exp-search" placeholder="بحث بالوصف أو الفئة أو المشروع…" oninput="renderExpenses()" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <select id="exp-cat-filter" onchange="renderExpenses()" style="max-width:140px">
+            <option value="">كل الفئات</option>
+            <option value="مواد">مواد</option>
+            <option value="عمالة">عمالة</option>
+            <option value="معدات">معدات</option>
+            <option value="نقل">نقل</option>
+            <option value="تصاريح">تصاريح</option>
+            <option value="أخرى">أخرى</option>
+          </select>
+        </div>
+        <div class="toolbar-row">
+          <div class="form-group" style="flex:1;min-width:130px">
+            <label style="font-size:11px">من تاريخ</label>
+            <input type="date" id="exp-date-from" onchange="renderExpenses()" />
+          </div>
+          <div class="form-group" style="flex:1;min-width:130px">
+            <label style="font-size:11px">إلى تاريخ</label>
+            <input type="date" id="exp-date-to" onchange="renderExpenses()" />
+          </div>
+          <button class="btn btn-sm" style="align-self:flex-end" onclick="clearExpenseFilters()">مسح الفلاتر</button>
+        </div>
+        <div class="toolbar-row">
+          <button class="btn btn-pdf" onclick="exportExpensesPDF()">تصدير القائمة PDF</button>
+          <button class="btn btn-pdf" onclick="exportExpensesExcel()">تصدير Excel</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>التاريخ</th><th>الوصف</th><th>الفئة</th><th>المشروع</th><th>المبلغ</th><th></th></tr></thead>
+            <tbody id="expense-table"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -669,6 +740,7 @@
             <option value="project">المشاريع</option>
             <option value="client">العملاء</option>
             <option value="supplier">الموردين</option>
+            <option value="partner">الشركاء</option>
             <option value="employee">الموظفين</option>
             <option value="backup">النسخ الاحتياطية</option>
           </select>
@@ -690,10 +762,25 @@
     <input type="hidden" id="inv-edit-id" value="" />
     <div id="inv-err"></div>
     <div class="form-grid">
+      <div class="form-group full"><label>نوع الفاتورة *</label>
+        <select id="inv-type">
+          <option value="madin">مدين — العميل عليه فلوس للشركة (الوضع العادي)</option>
+          <option value="alayna">دائن — الشركة عليها فلوس لهذا الطرف (مرتجع/التزام)</option>
+        </select>
+      </div>
       <div class="form-group"><label>اسم العميل *</label><input id="inv-client" list="clients-datalist" placeholder="مثال: مجموعة المنصور" /><datalist id="clients-datalist"></datalist></div>
       <div class="form-group"><label>رقم الفاتورة * <button type="button" onclick="autoFillInvoiceNum()" style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);cursor:pointer;margin-right:4px;">ترقيم تلقائي</button></label><input id="inv-num" placeholder="INV-001" /></div>
       <div class="form-group full"><label>المشروع</label><select id="inv-project"><option value="">— بدون مشروع —</option></select></div>
-      <div class="form-group"><label>المبلغ (جنيه) *</label><input id="inv-amount" type="number" placeholder="0" /></div>
+      <div class="form-group full">
+        <label>المبلغ (جنيه) * <button type="button" onclick="toggleSqmCalculator()" style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);cursor:pointer;margin-right:4px;">حساب بالمتر</button></label>
+        <input id="inv-amount" type="number" placeholder="0" />
+      </div>
+      <div id="inv-sqm-calc-row" style="display:none;" class="form-group full">
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;background:var(--surface2);border-radius:var(--radius-sm);padding:10px;">
+          <div style="flex:1;min-width:90px"><label style="font-size:11px">المساحة (م²)</label><input id="inv-sqm-area" type="number" placeholder="0" oninput="calcInvoiceAmountFromSqm()" /></div>
+          <div style="flex:1;min-width:90px"><label style="font-size:11px">سعر المتر</label><input id="inv-sqm-price" type="number" placeholder="0" oninput="calcInvoiceAmountFromSqm()" /></div>
+        </div>
+      </div>
       <div class="form-group"><label>تاريخ الإصدار</label><input id="inv-issue" type="date" /></div>
       <div class="form-group full"><label>تاريخ الاستحقاق *</label><input id="inv-due" type="date" /></div>
       <div class="form-group full"><label>ملاحظات</label><textarea id="inv-notes" placeholder="ملاحظات اختيارية…"></textarea></div>
@@ -748,55 +835,6 @@
 </div>
 
 <!-- نموذج المشروع -->
-<div class="modal-overlay" id="modal-project">
-  <div class="modal">
-    <div class="modal-title" id="prj-modal-title">مشروع جديد</div>
-    <input type="hidden" id="prj-edit-id" value="" />
-    <div id="prj-err"></div>
-
-    <div id="prj-financials-section" style="display:none;margin-bottom:16px;">
-      <div id="prj-financial-summary" style="font-size:13px;color:var(--text2);background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;"></div>
-      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-        <button class="btn btn-sm btn-accent" id="prj-add-invoice-btn" onclick="quickAddForProject('invoice')">+ فاتورة لهذا المشروع</button>
-        <button class="btn btn-sm btn-accent" id="prj-add-expense-btn" onclick="quickAddForProject('expense')">+ مصروف لهذا المشروع</button>
-        <button class="btn btn-sm btn-pdf" id="prj-handover-btn" onclick="exportProjectHandoverPDF(document.getElementById('prj-edit-id').value)">إيصال تسليم</button>
-      </div>
-      <div style="margin-bottom:12px;">
-        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">فواتير المشروع</div>
-        <div id="prj-invoices-list" style="max-height:170px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
-      </div>
-      <div style="margin-bottom:6px;">
-        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">مصروفات المشروع</div>
-        <div id="prj-expenses-list" style="max-height:170px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
-      </div>
-    </div>
-
-    <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px;border-top:1px solid var(--border);padding-top:12px;">بيانات المشروع</div>
-    <div class="form-grid">
-      <div class="form-group full"><label>اسم المشروع *</label><input id="prj-name" placeholder="مثال: فيلا القاهرة الجديدة #12" /></div>
-      <div class="form-group"><label>العميل</label><input id="prj-client" placeholder="اسم العميل" /></div>
-      <div class="form-group"><label>الميزانية (جنيه)</label><input id="prj-budget" type="number" placeholder="0" /></div>
-      <div class="form-group"><label>تاريخ البدء</label><input id="prj-start" type="date" /></div>
-      <div class="form-group"><label>تاريخ التسليم المتوقع</label><input id="prj-expected-delivery" type="date" /></div>
-      <div class="form-group full"><label>الحالة</label>
-        <select id="prj-status">
-          <option value="نشط">نشط</option>
-          <option value="مكتمل">مكتمل</option>
-          <option value="متوقف">متوقف</option>
-        </select>
-      </div>
-    </div>
-    <div id="prj-members-section" style="display:none;margin-top:14px;">
-      <label style="display:block;margin-bottom:6px;">المهندسون المعينون على هذا المشروع</label>
-      <div id="prj-members-list" style="font-size:13px;color:var(--text2);background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;">—</div>
-    </div>
-    <div id="prj-audit-section" style="display:none;margin-top:12px;font-size:12px;color:var(--text3);border-top:1px solid var(--border);padding-top:10px;"></div>
-    <div class="modal-actions">
-      <button class="btn btn-accent" id="prj-save-btn" onclick="saveProject()">حفظ المشروع</button>
-      <button class="btn" onclick="closeModal('project')">إغلاق</button>
-    </div>
-  </div>
-</div>
 
 <!-- نافذة النسخ الاحتياطية -->
 <div class="modal-overlay" id="modal-backups">
@@ -907,6 +945,58 @@
     <div class="modal-actions">
       <button class="btn btn-accent" id="supplier-save-btn" onclick="saveSupplier()">حفظ</button>
       <button class="btn" onclick="closeModal('supplier')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة الشريك -->
+<div class="modal-overlay" id="modal-partner">
+  <div class="modal">
+    <div class="modal-title" id="partner-modal-title">شريك جديد</div>
+    <input type="hidden" id="partner-edit-id" value="" />
+    <div id="partner-err"></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>الاسم *</label><input id="partner-name" placeholder="اسم الشريك" /></div>
+      <div class="form-group"><label>رقم الهاتف</label><input id="partner-phone" type="tel" placeholder="01xxxxxxxxx" /></div>
+      <div class="form-group full"><label>ملاحظات</label><textarea id="partner-notes" placeholder="ملاحظات اختيارية…"></textarea></div>
+    </div>
+
+    <div id="partner-summary-section" style="display:none;margin-top:14px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px;">الرصيد عبر كل المشاريع</div>
+      <div id="partner-projects-breakdown" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+      <div id="partner-balance-summary" style="font-size:13px;background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;"></div>
+    </div>
+
+    <div id="partner-withdrawals-section" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px;">السحوبات</div>
+      <div id="partner-withdrawals-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <input id="partner-withdrawal-amount" type="number" placeholder="المبلغ" style="flex:1;min-width:90px" />
+        <input id="partner-withdrawal-date" type="date" style="flex:1;min-width:120px" />
+        <button class="btn btn-sm btn-accent" onclick="recordPartnerWithdrawal()">تسجيل سحب</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-accent" id="partner-save-btn" onclick="savePartner()">حفظ</button>
+      <button class="btn btn-danger" id="partner-delete-btn" onclick="deletePartner()" style="display:none">حذف الشريك</button>
+      <button class="btn" onclick="closeModal('partner')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة إضافة شريك لمشروع معين -->
+<div class="modal-overlay" id="modal-add-partner-share">
+  <div class="modal">
+    <div class="modal-title">إضافة شريك للمشروع</div>
+    <div id="add-partner-share-err"></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>الشريك *</label><select id="share-partner-select"></select></div>
+      <div class="form-group full"><label>نسبته في هذا المشروع (%) *</label><input id="share-percentage" type="number" min="0" max="100" placeholder="مثال: 25" /></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-accent" onclick="saveAddPartnerShare()">إضافة</button>
+      <button class="btn" onclick="closeModal('add-partner-share')">إلغاء</button>
     </div>
   </div>
 </div>
@@ -1080,6 +1170,7 @@
     document.getElementById('nav-dashboard').style.display = isEngineer ? 'none' : '';
     document.getElementById('nav-clients').style.display = isEngineer ? 'none' : '';
     document.getElementById('nav-suppliers').style.display = isEngineer ? 'none' : '';
+    document.getElementById('nav-partners').style.display = isAdmin ? '' : 'none';
     document.getElementById('nav-reports').style.display = isEngineer ? 'none' : '';
     document.getElementById('nav-quotes').style.display = isEngineer ? 'none' : '';
     // Engineers can see the Projects tab, but renderProjects() restricts it to their own project
@@ -1111,12 +1202,12 @@
     const itSection = document.getElementById('it-update-section');
     if (itSection) itSection.style.display = isITOnly ? '' : 'none';
 
-    // Land engineer on invoices tab since dashboard is hidden
+    // Land engineer on projects tab since dashboard is hidden (invoices/expenses now live inside each project)
     if (isEngineer) {
       document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
       document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-      document.getElementById('tab-invoices').classList.add('visible');
-      document.getElementById('nav-invoices').classList.add('active');
+      document.getElementById('tab-projects').classList.add('visible');
+      document.getElementById('nav-projects').classList.add('active');
     }
   }
 
@@ -1287,7 +1378,7 @@
   });
   checkLoginLockout(); // resume countdown display if the page was refreshed mid-lockout
 
-  let state = { invoices: [], expenses: [], projects: [], clients: [], suppliers: [], quotes: [], trash: [] };
+  let state = { invoices: [], expenses: [], projects: [], clients: [], suppliers: [], quotes: [], trash: [], partners: [] };
   let deferredPrompt = null;
 
   window.addEventListener('beforeinstallprompt', e => {
@@ -1636,10 +1727,7 @@
     clearInvoiceFilters();
     document.getElementById('inv-status-filter').value = 'overdue';
     renderInvoices();
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
-    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-invoices').classList.add('visible');
-    document.getElementById('nav-invoices').classList.add('active');
+    showTab('reports', document.getElementById('nav-reports'));
   }
 
   function goToDueSoonInvoices() {
@@ -1650,10 +1738,7 @@
     document.getElementById('inv-date-from').value = today();
     document.getElementById('inv-date-to').value = in3days.toISOString().split('T')[0];
     renderInvoices();
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
-    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-invoices').classList.add('visible');
-    document.getElementById('nav-invoices').classList.add('active');
+    showTab('reports', document.getElementById('nav-reports'));
   }
 
   // Fills a <select id="..."> with project names. Engineers only see their assigned projects.
@@ -1680,6 +1765,10 @@
       setFormReadonly('invoice', false);
       document.getElementById('inv-issue').value = today();
       document.getElementById('inv-err').innerHTML = '';
+      document.getElementById('inv-type').value = 'madin';
+      document.getElementById('inv-sqm-calc-row').style.display = 'none';
+      document.getElementById('inv-sqm-area').value = '';
+      document.getElementById('inv-sqm-price').value = '';
       autoFillInvoiceNum();
       const defaultProject = currentUserRole === 'engineer' && currentUserProjects.length === 1 ? currentUserProjects[0] : '';
       populateProjectSelect('inv-project', defaultProject);
@@ -1692,25 +1781,13 @@
       populateProjectSelect('exp-project', defaultProject);
       document.getElementById('exp-project').disabled = (currentUserRole === 'engineer' && currentUserProjects.length === 1);
     }
-    if (type === 'project') {
-      document.getElementById('prj-edit-id').value = '';
-      document.getElementById('prj-modal-title').textContent = 'مشروع جديد';
-      document.getElementById('prj-audit-section').style.display = 'none';
-      document.getElementById('prj-members-section').style.display = 'none';
-      document.getElementById('prj-financials-section').style.display = 'none';
-      document.getElementById('prj-save-btn').style.display = '';
-      setFormReadonly('project', false);
-      document.getElementById('prj-start').value = today();
-      document.getElementById('prj-expected-delivery').value = '';
-      document.getElementById('prj-err').innerHTML = '';
-    }
   }
   function closeModal(type) { document.getElementById('modal-' + type).classList.remove('open'); }
 
   function setFormReadonly(type, readonly) {
     const ids = {
-      invoice: ['inv-client','inv-num','inv-project','inv-amount','inv-issue','inv-due','inv-notes'],
-      project: ['prj-name','prj-client','prj-budget','prj-start','prj-status'],
+      invoice: ['inv-client','inv-num','inv-type','inv-project','inv-amount','inv-issue','inv-due','inv-notes'],
+      project: ['prj-name','prj-code','prj-client','prj-budget','prj-start','prj-expected-delivery','prj-status'],
     }[type];
     ids.forEach(id => {
       const el = document.getElementById(id);
@@ -1731,11 +1808,15 @@
     document.getElementById('inv-err').innerHTML = '';
     document.getElementById('inv-client').value = inv.client || '';
     document.getElementById('inv-num').value = inv.num || '';
+    document.getElementById('inv-type').value = inv.type === 'alayna' ? 'alayna' : 'madin';
     populateProjectSelect('inv-project', inv.project || '');
     document.getElementById('inv-amount').value = inv.amount || '';
     document.getElementById('inv-issue').value = inv.issue || '';
     document.getElementById('inv-due').value = inv.due || '';
     document.getElementById('inv-notes').value = inv.notes || '';
+    document.getElementById('inv-sqm-calc-row').style.display = 'none';
+    document.getElementById('inv-sqm-area').value = '';
+    document.getElementById('inv-sqm-price').value = '';
 
     // Audit info
     let audit = `أُنشئت بواسطة: <strong style="color:var(--text)">${inv.createdBy || 'غير معروف'}</strong>`;
@@ -1789,21 +1870,64 @@
     }
   }
 
+  // Switches the visible section to the full-page project detail view,
+  // without requiring a nav-bar button (it's reached only by clicking a project).
+  function showProjectDetailPage() {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-project-detail').classList.add('visible');
+  }
+
+  function closeProjectDetailPage() {
+    showTab('projects', document.getElementById('nav-projects'));
+  }
+
+  // id === null means "create a new project" (full page in creation mode).
+  // Otherwise opens the existing project's full detail page.
   async function openProjectDetail(id) {
-    const p = state.projects.find(x => x.id === id);
-    if (!p) return;
-    document.getElementById('modal-project').classList.add('open');
-    document.getElementById('prj-edit-id').value = p.id;
-    document.getElementById('prj-modal-title').textContent = 'تفاصيل المشروع';
+    showProjectDetailPage();
     document.getElementById('prj-err').innerHTML = '';
+
+    if (id === null || id === undefined) {
+      document.getElementById('prj-edit-id').value = '';
+      document.getElementById('prj-page-title').textContent = 'مشروع جديد';
+      document.getElementById('prj-page-code-badge').textContent = '';
+      document.getElementById('prj-page-actions').innerHTML = '';
+      document.getElementById('prj-name').value = '';
+      document.getElementById('prj-code').value = generateProjectCode();
+      document.getElementById('prj-client').value = '';
+      document.getElementById('prj-budget').value = '';
+      document.getElementById('prj-start').value = today();
+      document.getElementById('prj-expected-delivery').value = '';
+      document.getElementById('prj-status').value = 'نشط';
+      document.getElementById('prj-audit-section').style.display = 'none';
+      document.getElementById('prj-members-section').style.display = 'none';
+      document.getElementById('prj-financials-section').style.display = 'none';
+      document.getElementById('prj-save-btn').style.display = '';
+      document.getElementById('prj-delete-btn').style.display = 'none';
+      setFormReadonly('project', false);
+      return;
+    }
+
+    const p = state.projects.find(x => x.id === id);
+    if (!p) { closeProjectDetailPage(); return; }
+
+    document.getElementById('prj-edit-id').value = p.id;
+    document.getElementById('prj-page-title').textContent = p.name;
+    document.getElementById('prj-page-code-badge').textContent = p.code || '';
     document.getElementById('prj-name').value = p.name || '';
+    document.getElementById('prj-code').value = p.code || '';
     document.getElementById('prj-client').value = p.client || '';
     document.getElementById('prj-budget').value = p.budget || '';
     document.getElementById('prj-start').value = p.start || '';
     document.getElementById('prj-expected-delivery').value = p.expectedDelivery || '';
     document.getElementById('prj-status').value = p.status || 'نشط';
 
+    // Page-level header is kept clean; the delete action lives in the form's action bar below.
+    document.getElementById('prj-page-actions').innerHTML = '';
+
     renderProjectFinancials(p);
+    renderProjectPartners(p);
 
     // Audit info
     let audit = `أُنشئ بواسطة: <strong style="color:var(--text)">${p.createdBy || 'غير معروف'}</strong>`;
@@ -1865,7 +1989,7 @@
     }
 
     // Permissions:
-    // - admin: full edit of all fields
+    // - admin/IT: full edit of all fields
     // - engineer assigned to this project: can edit everything except the project name
     // - everyone else (accountant, or engineer on another project): view-only
     const isOwnProjectEngineer = currentUserRole === 'engineer' && currentUserProjects.includes(p.name);
@@ -1873,9 +1997,21 @@
     setFormReadonly('project', readonly);
     if (isOwnProjectEngineer) document.getElementById('prj-name').readOnly = true; // prevent renaming (breaks project linkage)
     document.getElementById('prj-save-btn').style.display = readonly ? 'none' : '';
+    document.getElementById('prj-delete-btn').style.display = (isAdminOrIT() ? '' : 'none');
   }
 
   let quickAddProjectName = '';
+
+  // If the project detail page happens to be open (e.g. a quick-add invoice/expense was
+  // just saved from inside it), refresh its lists/totals in place without navigating away.
+  function refreshProjectDetailIfOpen() {
+    const section = document.getElementById('tab-project-detail');
+    const editId = document.getElementById('prj-edit-id')?.value;
+    if (section && section.classList.contains('visible') && editId) {
+      const p = state.projects.find(x => x.id === editId);
+      if (p) { renderProjectFinancials(p); renderProjectPartners(p); }
+    }
+  }
 
   function renderProjectFinancials(p) {
     const section = document.getElementById('prj-financials-section');
@@ -1883,9 +2019,12 @@
 
     const invoices = state.invoices.filter(i => i.project === p.name);
     const expenses = state.expenses.filter(e => e.project === p.name);
-    const totalInv = invoices.reduce((s, i) => s + Number(i.amount), 0);
+    const madinInvoices = invoices.filter(i => !invoiceIsAlayna(i));
+    const alaynaInvoices = invoices.filter(i => invoiceIsAlayna(i));
+    const totalMadin = madinInvoices.reduce((s, i) => s + Number(i.amount), 0);
+    const totalAlayna = alaynaInvoices.reduce((s, i) => s + Number(i.amount), 0);
     const totalExp = expenses.reduce((s, e) => s + Number(e.amount), 0);
-    const netProfit = totalInv - totalExp;
+    const netProfit = (totalMadin - totalAlayna) - totalExp;
     const pct = p.budget > 0 ? Math.round((totalExp / p.budget) * 100) : null;
 
     let deliveryWarning = '';
@@ -1895,7 +2034,8 @@
     }
 
     document.getElementById('prj-financial-summary').innerHTML = `
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>إجمالي الفواتير</span><strong>${fmt(totalInv)}</strong></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>إجمالي مدين</span><strong>${fmt(totalMadin)}</strong></div>
+      ${totalAlayna > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>إجمالي دائن</span><strong style="color:#b06ad6">${fmt(totalAlayna)}</strong></div>` : ''}
       <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>إجمالي المصروفات</span><strong style="color:var(--red)">${fmt(totalExp)}</strong></div>
       <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>صافي الربح التقديري</span><strong style="color:${netProfit >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(netProfit)}</strong></div>
       ${p.budget > 0 ? `<div style="display:flex;justify-content:space-between;"><span>الميزانية</span><strong>${fmt(p.budget)} ${pct !== null ? `(${pct}% منفق)` : ''}</strong></div>` : ''}
@@ -1913,9 +2053,9 @@
     } else {
       invList.innerHTML = invoices.slice().reverse().map(i => {
         const st = invoiceStatus(i);
-        return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:8px;" onclick="closeModal('project');openInvoiceDetail('${i.id}')">
+        return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:8px;" onclick="openInvoiceDetail('${i.id}')">
           <div>
-            <div style="font-size:12px;font-weight:700;color:var(--accent)">${i.num} <span style="color:var(--text2);font-weight:400">— ${i.client}</span></div>
+            <div style="font-size:12px;font-weight:700;color:var(--accent)">${i.num}${invoiceIsAlayna(i) ? ` <span class="badge" style="background:#b06ad620;color:#b06ad6;font-size:9px;">دائن</span>` : ''} <span style="color:var(--text2);font-weight:400">— ${i.client}</span></div>
             <div style="font-size:11px;color:var(--text3)">استحقاق: ${fmtDate(i.due)}</div>
           </div>
           <div style="text-align:left">
@@ -1943,12 +2083,64 @@
         </div>
       `).join('');
     }
+
+    renderProjectMonthlyBreakdown(p);
+  }
+
+  // ===== Monthly breakdown for a single project (cash-basis: when money actually moved) =====
+  // "دفعنا" = expenses paid that month (by expense date)
+  // "اخدنا" = invoice payments actually received that month (by payment date, مدين only)
+  // "علينا المدفوع" = any دائن invoice payments paid out that month (money going OUT to settle a liability)
+  function renderProjectMonthlyBreakdown(p) {
+    const el = document.getElementById('prj-monthly-breakdown');
+    if (!el) return;
+    const invoices = state.invoices.filter(i => i.project === p.name);
+    const expenses = state.expenses.filter(e => e.project === p.name);
+
+    const months = {}; // key: 'YYYY-MM' -> { collected, alaynaPaid, expenses }
+    const ensure = key => { if (!months[key]) months[key] = { collected: 0, alaynaPaid: 0, expenses: 0 }; return months[key]; };
+
+    invoices.forEach(i => {
+      getInvoicePayments(i).forEach(pmt => {
+        if (!pmt.date) return;
+        const key = pmt.date.substring(0, 7);
+        if (invoiceIsAlayna(i)) ensure(key).alaynaPaid += Number(pmt.amount);
+        else ensure(key).collected += Number(pmt.amount);
+      });
+    });
+    expenses.forEach(e => {
+      if (!e.date) return;
+      const key = e.date.substring(0, 7);
+      ensure(key).expenses += Number(e.amount);
+    });
+
+    const keys = Object.keys(months).sort();
+    if (!keys.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text3);">لا توجد حركة مالية مسجّلة بعد لعرضها شهريًا.</div>';
+      return;
+    }
+    el.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>الشهر</th><th>اخدنا</th><th>علينا (مدفوع)</th><th>دفعنا</th><th>صافي الشهر</th></tr></thead>
+      <tbody>
+        ${keys.map(key => {
+          const m = months[key];
+          const net = m.collected - m.alaynaPaid - m.expenses;
+          const label = new Date(key + '-01').toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
+          return `<tr>
+            <td style="font-weight:700">${label}</td>
+            <td style="color:var(--green)">${fmt(m.collected)}</td>
+            <td style="color:#b06ad6">${m.alaynaPaid > 0 ? fmt(m.alaynaPaid) : '—'}</td>
+            <td style="color:var(--red)">${fmt(m.expenses)}</td>
+            <td style="font-weight:700;color:${net>=0?'var(--green)':'var(--red)'}">${fmt(net)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>`;
   }
 
   // Opens the invoice/expense creation modal pre-locked to a specific project (used from inside a project's detail view)
   function quickAddForProject(type) {
     quickAddProjectName = document.getElementById('prj-name').value.trim();
-    closeModal('project');
     openModal(type);
     setTimeout(() => {
       const sel = document.getElementById(type === 'invoice' ? 'inv-project' : 'exp-project');
@@ -1971,10 +2163,11 @@
           clients: data.clients || [],
           suppliers: data.suppliers || [],
           quotes: data.quotes || [],
-          trash: data.trash || []
+          trash: data.trash || [],
+          partners: data.partners || []
         };
       } else {
-        state = { invoices: [], expenses: [], projects: [], clients: [], suppliers: [], quotes: [], trash: [] };
+        state = { invoices: [], expenses: [], projects: [], clients: [], suppliers: [], quotes: [], trash: [], partners: [] };
         COMPANY_DOC.set(state).catch(() => {});
       }
       renderAll();
@@ -2043,14 +2236,29 @@
     return { key: 'pending', label: 'معلّقة' };
   }
 
+  // ===== مدين / دائن (debit/credit) =====
+  // 'lina' (default, backward-compatible with every invoice created before this feature)
+  // means the customer owes the company — a normal receivable.
+  // 'alayna' means the company owes the other party — e.g. a refund or liability.
+  // These are NOT summed together as if they were the same direction: "alayna" amounts
+  // are subtracted from net revenue/profit calculations rather than added.
+  function invoiceIsAlayna(inv) { return inv.type === 'alayna'; }
+  function invoiceTypeLabel(inv) { return invoiceIsAlayna(inv) ? 'دائن' : 'مدين'; }
+  // Signed amount for net financial totals: positive for مدين, negative for دائن.
+  function invoiceNetAmount(inv) { return invoiceIsAlayna(inv) ? -Number(inv.amount) : Number(inv.amount); }
+
   function renderDashboard() {
-    const totalInv = state.invoices.reduce((s, i) => s + Number(i.amount), 0);
-    const collected = state.invoices.reduce((s, i) => s + invoicePaidTotal(i), 0);
-    const pending = state.invoices.reduce((s, i) => s + invoiceRemaining(i), 0);
+    const linaInvoices = state.invoices.filter(i => !invoiceIsAlayna(i));
+    const alaynaInvoices = state.invoices.filter(i => invoiceIsAlayna(i));
+    const totalInv = linaInvoices.reduce((s, i) => s + Number(i.amount), 0);
+    const totalAlayna = alaynaInvoices.reduce((s, i) => s + Number(i.amount), 0);
+    const collected = linaInvoices.reduce((s, i) => s + invoicePaidTotal(i), 0);
+    const pending = linaInvoices.reduce((s, i) => s + invoiceRemaining(i), 0);
     const totalExp = state.expenses.reduce((s, e) => s + Number(e.amount), 0);
     document.getElementById('m-invoiced').textContent = fmt(totalInv);
     document.getElementById('m-collected').textContent = fmt(collected);
     document.getElementById('m-pending').textContent = fmt(pending);
+    document.getElementById('m-alayna').textContent = fmt(totalAlayna);
     document.getElementById('m-expenses').textContent = fmt(totalExp);
 
     // ===== Alerts: overdue invoices, due-soon invoices, over-budget projects =====
@@ -2252,7 +2460,7 @@
       const d = inv.issue || inv.createdAt?.split('T')[0];
       if (!d) return;
       const key = d.substring(0,7);
-      if (invByMonth[key] !== undefined) invByMonth[key] += Number(inv.amount);
+      if (invByMonth[key] !== undefined) invByMonth[key] += invoiceNetAmount(inv);
     });
     state.expenses.forEach(e => {
       const key = (e.date||'').substring(0,7);
@@ -2312,7 +2520,7 @@
         ? `<div style="font-weight:700">${fmt(i.amount)}</div><div style="font-size:11px;color:var(--text3)">المتبقي: ${fmt(remaining)}</div>`
         : `<span style="font-weight:700">${fmt(i.amount)}</span>`;
       return `<tr style="cursor:pointer" onclick="openInvoiceDetail('${i.id}')">
-        <td style="font-weight:700;color:var(--accent)">${i.num}</td>
+        <td style="font-weight:700;color:var(--accent)">${i.num}${invoiceIsAlayna(i) ? ` <span class="badge" style="background:#b06ad620;color:#b06ad6;font-size:10px;">دائن</span>` : ''}</td>
         <td>${i.client}${i.project ? `<div style="font-size:11px;color:var(--text3)">${i.project}</div>` : ''}</td>
         <td>${amountCell}</td>
         <td style="color:var(--text2)">${fmtDate(i.due)}</td>
@@ -2369,7 +2577,7 @@
     const q = (document.getElementById('prj-search')?.value || '').trim();
     let list = state.projects.slice().reverse();
     if (currentUserRole === 'engineer') list = list.filter(p => currentUserProjects.includes(p.name));
-    if (q) list = list.filter(p => smartMatch([p.name, p.client, p.status, fmt(p.budget||0)].join(' '), q));
+    if (q) list = list.filter(p => smartMatch([p.name, p.code, p.client, p.status, fmt(p.budget||0)].join(' '), q));
     if (!list.length) {
       el.innerHTML = `<div class="empty-state">${q ? 'لا توجد نتائج مطابقة.' : (currentUserRole === 'engineer' ? 'لم يتم تعيينك على أي مشروع بعد.' : 'لا توجد مشاريع بعد.')}</div>`;
       return;
@@ -2377,7 +2585,7 @@
     const stMap = { 'نشط': 'badge-active', 'مكتمل': 'badge-completed', 'متوقف': 'badge-hold' };
     const canEditProjects = isAdminOrIT();
     el.innerHTML = list.map(p => {
-      const pinv = state.invoices.filter(i => i.project === p.name).reduce((s, i) => s + Number(i.amount), 0);
+      const pinv = state.invoices.filter(i => i.project === p.name).reduce((s, i) => s + invoiceNetAmount(i), 0);
       const pexp = state.expenses.filter(e => e.project === p.name).reduce((s, e) => s + Number(e.amount), 0);
       const pProfit = pinv - pexp;
       const pct = p.budget > 0 ? Math.min(100, Math.round(pexp / p.budget * 100)) : 0;
@@ -2390,13 +2598,13 @@
             ${canEditProjects ? `<button class="btn btn-sm btn-danger" onclick="deleteItem('projects','${p.id}')">حذف</button>` : ''}
           </div>
           <div style="text-align:right">
-            <div style="font-size:15px;font-weight:700">${p.name}</div>
+            <div style="font-size:15px;font-weight:700">${p.name} ${p.code ? `<span style="font-size:11px;font-weight:400;color:var(--text3)">(${p.code})</span>` : ''}</div>
             <div style="font-size:12px;color:var(--text3);margin-top:2px">${p.client || 'بدون عميل'} · ${fmtDate(p.start)}</div>
           </div>
         </div>
         <div class="project-stats">
           <div style="text-align:right"><div class="pstat-label">المنفق</div><div class="pstat-val" style="color:var(--red)">${fmt(pexp)}</div></div>
-          <div style="text-align:right"><div class="pstat-label">الفواتير</div><div class="pstat-val" style="color:var(--green)">${fmt(pinv)}</div></div>
+          <div style="text-align:right"><div class="pstat-label">صافي الفواتير</div><div class="pstat-val" style="color:var(--green)">${fmt(pinv)}</div></div>
           <div style="text-align:right"><div class="pstat-label">صافي الربح</div><div class="pstat-val" style="color:${pProfit>=0?'var(--green)':'var(--red)'}">${fmt(pProfit)}</div></div>
         </div>
         ${p.budget > 0 ? `
@@ -2407,7 +2615,7 @@
     }).join('');
   }
 
-  function renderAll() { renderDashboard(); renderInvoices(); renderExpenses(); renderProjects(); renderClients(); renderSuppliers(); renderQuotes(); populateClientsDatalist(); populateSuppliersDatalist(); }
+  function renderAll() { renderDashboard(); renderInvoices(); renderExpenses(); renderProjects(); renderClients(); renderSuppliers(); renderQuotes(); renderPartners(); populateClientsDatalist(); populateSuppliersDatalist(); }
 
   // ===== Clients directory =====
 
@@ -2419,10 +2627,12 @@
 
   function clientTotals(name) {
     const invoices = state.invoices.filter(i => i.client === name);
-    const totalInvoiced = invoices.reduce((s, i) => s + Number(i.amount), 0);
-    const totalPaid = invoices.reduce((s, i) => s + invoicePaidTotal(i), 0);
-    const totalRemaining = invoices.reduce((s, i) => s + invoiceRemaining(i), 0);
-    return { count: invoices.length, totalInvoiced, totalPaid, totalRemaining };
+    const linaInvoices = invoices.filter(i => !invoiceIsAlayna(i));
+    const totalInvoiced = linaInvoices.reduce((s, i) => s + Number(i.amount), 0);
+    const totalPaid = linaInvoices.reduce((s, i) => s + invoicePaidTotal(i), 0);
+    const totalRemaining = linaInvoices.reduce((s, i) => s + invoiceRemaining(i), 0);
+    const totalAlayna = invoices.filter(i => invoiceIsAlayna(i)).reduce((s, i) => s + Number(i.amount), 0);
+    return { count: invoices.length, totalInvoiced, totalPaid, totalRemaining, totalAlayna };
   }
 
   function renderClients() {
@@ -2641,6 +2851,281 @@
     persist(); renderAll();
   }
 
+  // ===== Partners (شركاء) =====
+  // Each partner can hold a different percentage share in EACH project individually
+  // (stored as project.partnerShares = [{partnerId, percentage}]), not a single
+  // company-wide percentage. A partner's profit share for a project = percentage% of
+  // that project's net profit (invoiced - expenses, same basis used elsewhere).
+  // Withdrawals reduce the partner's running balance; a negative balance means the
+  // partner has withdrawn more than their earned share (they owe the company — "عليه").
+
+  function partnerProjectBreakdown(partnerId) {
+    return state.projects
+      .map(p => {
+        const share = (p.partnerShares || []).find(s => s.partnerId === partnerId);
+        if (!share) return null;
+        const pinv = state.invoices.filter(i => i.project === p.name).reduce((s, i) => s + invoiceNetAmount(i), 0);
+        const pexp = state.expenses.filter(e => e.project === p.name).reduce((s, e) => s + Number(e.amount), 0);
+        const netProfit = pinv - pexp;
+        const partnerShareAmount = netProfit * (Number(share.percentage) / 100);
+        return { project: p, percentage: Number(share.percentage), netProfit, partnerShareAmount };
+      })
+      .filter(Boolean);
+  }
+
+  function partnerTotals(partnerId) {
+    const partner = state.partners.find(x => x.id === partnerId);
+    const breakdown = partnerProjectBreakdown(partnerId);
+    const totalEarned = breakdown.reduce((s, b) => s + b.partnerShareAmount, 0);
+    const totalWithdrawn = (partner?.withdrawals || []).reduce((s, w) => s + Number(w.amount), 0);
+    const netBalance = totalEarned - totalWithdrawn;
+    return { totalEarned, totalWithdrawn, netBalance, breakdown };
+  }
+
+  function renderPartners() {
+    const el = document.getElementById('partners-list');
+    if (!el) return;
+    if (!state.partners.length) {
+      el.innerHTML = '<div class="empty-state">لا يوجد شركاء بعد. اضغط "شريك جديد" للإضافة.</div>';
+      return;
+    }
+    el.innerHTML = state.partners.map((p, idx) => {
+      const t = partnerTotals(p.id);
+      const balanceLabel = t.netBalance >= 0 ? 'له' : 'عليه';
+      const balanceColor = t.netBalance >= 0 ? 'var(--green)' : 'var(--red)';
+      return `<div class="project-item" style="cursor:pointer" onclick="openPartnerModal(${idx})">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div style="text-align:left">
+            <div class="pstat-label">${balanceLabel}</div>
+            <div class="pstat-val" style="color:${balanceColor}">${fmt(Math.abs(t.netBalance))}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:15px;font-weight:700">${p.name}</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">${p.phone || 'بدون رقم'} · ${t.breakdown.length} مشروع</div>
+          </div>
+        </div>
+        <div class="project-stats">
+          <div style="text-align:right"><div class="pstat-label">إجمالي المستحق</div><div class="pstat-val" style="color:var(--green)">${fmt(t.totalEarned)}</div></div>
+          <div style="text-align:right"><div class="pstat-label">إجمالي المسحوب</div><div class="pstat-val" style="color:var(--red)">${fmt(t.totalWithdrawn)}</div></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function openPartnerModal(idx) {
+    document.getElementById('modal-partner').classList.add('open');
+    document.getElementById('partner-err').innerHTML = '';
+    const isEdit = idx !== undefined && idx !== null;
+    if (isEdit) {
+      const p = state.partners[idx];
+      document.getElementById('partner-modal-title').textContent = 'تفاصيل الشريك';
+      document.getElementById('partner-edit-id').value = p.id;
+      document.getElementById('partner-name').value = p.name || '';
+      document.getElementById('partner-phone').value = p.phone || '';
+      document.getElementById('partner-notes').value = p.notes || '';
+
+      const t = partnerTotals(p.id);
+      document.getElementById('partner-summary-section').style.display = '';
+      const breakdownEl = document.getElementById('partner-projects-breakdown');
+      breakdownEl.innerHTML = t.breakdown.length
+        ? t.breakdown.map(b => `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:12px;color:var(--text3)">${b.percentage}% × صافي ربح ${fmt(b.netProfit)}</div>
+            <div style="font-size:13px;font-weight:700">${b.project.name} <span style="color:var(--green)">(${fmt(b.partnerShareAmount)})</span></div>
+          </div>`).join('')
+        : '<div style="font-size:12px;color:var(--text3)">هذا الشريك غير مُشارك في أي مشروع حاليًا.</div>';
+
+      const balanceLabel = t.netBalance >= 0 ? 'له (مستحق غير مسحوب)' : 'عليه (سحب أكثر من نصيبه)';
+      const balanceColor = t.netBalance >= 0 ? 'var(--green)' : 'var(--red)';
+      document.getElementById('partner-balance-summary').innerHTML = `
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>إجمالي المستحق</span><strong style="color:var(--green)">${fmt(t.totalEarned)}</strong></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>إجمالي المسحوب</span><strong style="color:var(--red)">${fmt(t.totalWithdrawn)}</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span>${balanceLabel}</span><strong style="color:${balanceColor}">${fmt(Math.abs(t.netBalance))}</strong></div>
+      `;
+
+      document.getElementById('partner-withdrawals-section').style.display = '';
+      renderPartnerWithdrawalsList(p);
+      document.getElementById('partner-withdrawal-date').value = today();
+      document.getElementById('partner-delete-btn').style.display = isAdminOrIT() ? '' : 'none';
+    } else {
+      document.getElementById('partner-modal-title').textContent = 'شريك جديد';
+      document.getElementById('partner-edit-id').value = '';
+      document.getElementById('partner-name').value = '';
+      document.getElementById('partner-phone').value = '';
+      document.getElementById('partner-notes').value = '';
+      document.getElementById('partner-summary-section').style.display = 'none';
+      document.getElementById('partner-withdrawals-section').style.display = 'none';
+      document.getElementById('partner-delete-btn').style.display = 'none';
+    }
+  }
+
+  function renderPartnerWithdrawalsList(p) {
+    const list = document.getElementById('partner-withdrawals-list');
+    const withdrawals = p.withdrawals || [];
+    if (!withdrawals.length) {
+      list.innerHTML = '<div style="font-size:12px;color:var(--text3)">لا توجد سحوبات مسجّلة.</div>';
+      return;
+    }
+    list.innerHTML = withdrawals.slice().reverse().map(w => `
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--red)">${fmt(w.amount)}</div>
+          <div style="font-size:11px;color:var(--text3)">${fmtDate(w.date)} — بواسطة ${w.by || 'غير معروف'}</div>
+        </div>
+        <button class="btn btn-sm btn-danger" onclick="deletePartnerWithdrawal('${w.id}')">حذف</button>
+      </div>
+    `).join('');
+  }
+
+  function savePartner() {
+    const name = document.getElementById('partner-name').value.trim();
+    if (!name) {
+      document.getElementById('partner-err').innerHTML = '<div class="error-msg">يرجى إدخال اسم الشريك.</div>';
+      return;
+    }
+    const fields = {
+      name,
+      phone: document.getElementById('partner-phone').value.trim(),
+      notes: document.getElementById('partner-notes').value.trim()
+    };
+    const editId = document.getElementById('partner-edit-id').value;
+    if (editId) {
+      const p = state.partners.find(x => x.id === editId);
+      if (!p) return;
+      Object.assign(p, fields, { updatedBy: currentUserName, updatedAt: new Date().toISOString() });
+      logActivity('partner', 'update', `تعديل بيانات شريك "${name}"`);
+    } else {
+      state.partners.push({ id: uid(), ...fields, withdrawals: [], createdBy: currentUserName, createdAt: new Date().toISOString() });
+      logActivity('partner', 'create', `إضافة شريك "${name}"`);
+    }
+    persist(); renderAll(); closeModal('partner');
+  }
+
+  function deletePartner() {
+    if (!isAdminOrIT()) return;
+    const editId = document.getElementById('partner-edit-id').value;
+    const p = state.partners.find(x => x.id === editId);
+    if (!p) return;
+    if (!confirm(`حذف الشريك "${p.name}"؟ سيُحذف أيضًا من نسب جميع المشاريع. يمكن استرجاعه لاحقًا من سلة المحذوفات.`)) return;
+    moveToTrash('partners', p, `شريك: ${p.name}`);
+    state.partners = state.partners.filter(x => x.id !== editId);
+    // Clean up this partner's share entries from every project
+    state.projects.forEach(proj => {
+      if (proj.partnerShares) proj.partnerShares = proj.partnerShares.filter(s => s.partnerId !== editId);
+    });
+    logActivity('partner', 'delete', `حذف شريك "${p.name}"`);
+    persist(); renderAll(); closeModal('partner');
+  }
+
+  function recordPartnerWithdrawal() {
+    const editId = document.getElementById('partner-edit-id').value;
+    const p = state.partners.find(x => x.id === editId);
+    if (!p) return;
+    const amount = Number(document.getElementById('partner-withdrawal-amount').value);
+    const date = document.getElementById('partner-withdrawal-date').value || today();
+    if (!amount || amount <= 0) { alert('يرجى إدخال مبلغ صحيح.'); return; }
+    if (!Array.isArray(p.withdrawals)) p.withdrawals = [];
+    p.withdrawals.push({ id: uid(), amount, date, by: currentUserName, at: new Date().toISOString() });
+    logActivity('partner', 'update', `سحب ${fmt(amount)} للشريك "${p.name}"`);
+    persist();
+    document.getElementById('partner-withdrawal-amount').value = '';
+    openPartnerModal(state.partners.indexOf(p));
+    renderAll();
+  }
+
+  function deletePartnerWithdrawal(withdrawalId) {
+    const editId = document.getElementById('partner-edit-id').value;
+    const p = state.partners.find(x => x.id === editId);
+    if (!p || !Array.isArray(p.withdrawals)) return;
+    if (!confirm('حذف هذا السحب؟')) return;
+    p.withdrawals = p.withdrawals.filter(w => w.id !== withdrawalId);
+    persist();
+    openPartnerModal(state.partners.indexOf(p));
+    renderAll();
+  }
+
+  // ===== Partner shares within a single project (shown on the project detail page) =====
+
+  function renderProjectPartners(p) {
+    const list = document.getElementById('prj-partners-list');
+    if (!list) return;
+    const shares = p.partnerShares || [];
+    const canEdit = isAdminOrIT();
+    document.getElementById('prj-add-partner-btn').style.display = canEdit ? '' : 'none';
+
+    if (!shares.length) {
+      list.innerHTML = '<div style="font-size:12px;color:var(--text3)">لا يوجد شركاء مُعينون على هذا المشروع.</div>';
+      return;
+    }
+    const pinv = state.invoices.filter(i => i.project === p.name).reduce((s, i) => s + invoiceNetAmount(i), 0);
+    const pexp = state.expenses.filter(e => e.project === p.name).reduce((s, e) => s + Number(e.amount), 0);
+    const netProfit = pinv - pexp;
+    const totalPct = shares.reduce((s, sh) => s + Number(sh.percentage), 0);
+
+    let html = shares.map(sh => {
+      const partner = state.partners.find(x => x.id === sh.partnerId);
+      const shareAmount = netProfit * (Number(sh.percentage) / 100);
+      return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:13px;font-weight:700">${partner ? partner.name : 'شريك محذوف'}</div>
+          <div style="font-size:11px;color:var(--text3)">${sh.percentage}% × صافي الربح</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="font-size:13px;font-weight:700;color:${shareAmount>=0?'var(--green)':'var(--red)'}">${fmt(shareAmount)}</div>
+          ${canEdit ? `<button class="btn btn-sm btn-danger" onclick="removePartnerShareFromProject('${sh.partnerId}')">حذف</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+
+    if (totalPct > 100) {
+      html = `<div style="font-size:12px;color:var(--red);margin-bottom:6px;">⚠️ مجموع نسب الشركاء في هذا المشروع ${totalPct}% (أكثر من 100%)</div>` + html;
+    }
+    list.innerHTML = html;
+  }
+
+  function openAddPartnerShareModal() {
+    if (!isAdminOrIT()) return;
+    const projectId = document.getElementById('prj-edit-id').value;
+    if (!projectId) { alert('يرجى حفظ المشروع أولاً قبل إضافة شركاء.'); return; }
+    document.getElementById('modal-add-partner-share').classList.add('open');
+    document.getElementById('add-partner-share-err').innerHTML = '';
+    document.getElementById('share-percentage').value = '';
+    const p = state.projects.find(x => x.id === projectId);
+    const alreadyAssigned = (p?.partnerShares || []).map(s => s.partnerId);
+    const available = state.partners.filter(pt => !alreadyAssigned.includes(pt.id));
+    const sel = document.getElementById('share-partner-select');
+    sel.innerHTML = available.length
+      ? available.map(pt => `<option value="${pt.id}">${pt.name}</option>`).join('')
+      : '<option value="">لا يوجد شركاء متاحون (أضف شريكًا جديدًا أولاً)</option>';
+  }
+
+  function saveAddPartnerShare() {
+    const projectId = document.getElementById('prj-edit-id').value;
+    const p = state.projects.find(x => x.id === projectId);
+    if (!p) return;
+    const partnerId = document.getElementById('share-partner-select').value;
+    const percentage = Number(document.getElementById('share-percentage').value);
+    const errEl = document.getElementById('add-partner-share-err');
+    if (!partnerId) { errEl.innerHTML = '<div class="error-msg">يرجى اختيار شريك.</div>'; return; }
+    if (!percentage || percentage <= 0 || percentage > 100) { errEl.innerHTML = '<div class="error-msg">يرجى إدخال نسبة صحيحة بين 1 و100.</div>'; return; }
+    if (!p.partnerShares) p.partnerShares = [];
+    p.partnerShares.push({ partnerId, percentage });
+    const partner = state.partners.find(x => x.id === partnerId);
+    logActivity('project', 'update', `إضافة شريك "${partner ? partner.name : ''}" (${percentage}%) لمشروع "${p.name}"`);
+    persist();
+    renderProjectPartners(p);
+    closeModal('add-partner-share');
+  }
+
+  function removePartnerShareFromProject(partnerId) {
+    const projectId = document.getElementById('prj-edit-id').value;
+    const p = state.projects.find(x => x.id === projectId);
+    if (!p || !p.partnerShares) return;
+    if (!confirm('إزالة هذا الشريك من المشروع؟')) return;
+    p.partnerShares = p.partnerShares.filter(s => s.partnerId !== partnerId);
+    persist();
+    renderProjectPartners(p);
+  }
+
 
   // ===== PDF Export Functions (Arabic via HTML render) =====
 
@@ -2701,8 +3186,20 @@
     const move = e => { if (!sigDrawing) return; e.preventDefault(); const p = sigPos(canvas, e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); };
     const end = () => { sigDrawing = false; };
 
-    canvas.onmousedown = start; canvas.onmousemove = move; canvas.onmouseup = end; canvas.onmouseleave = end;
-    canvas.ontouchstart = start; canvas.ontouchmove = move; canvas.ontouchend = end;
+    // Mouse: bind mousedown to the canvas itself, but mousemove/mouseup to the
+    // whole document. A fast mouse drag very easily leaves the small canvas box
+    // mid-stroke — if move/end were canvas-only, the line would cut off the moment
+    // the cursor crosses the edge (this is exactly why it worked on phone but not
+    // laptop: touch naturally stays "captured" to the element it started on, mouse
+    // does not).
+    canvas.onmousedown = start;
+    document.onmousemove = move;
+    document.onmouseup = end;
+
+    // Touch: capture naturally stays on the canvas, canvas-level binding is enough.
+    canvas.ontouchstart = start;
+    canvas.ontouchmove = move;
+    canvas.ontouchend = end;
   }
 
   function clearSignatureCanvas() {
@@ -2724,12 +3221,14 @@
     const canvas = document.getElementById('signature-canvas');
     const dataUrl = sigHasStroke ? canvas.toDataURL('image/png') : null;
     closeModal('signature');
+    document.onmousemove = null; document.onmouseup = null;
     const cb = signatureCallback; signatureCallback = null;
     if (cb) cb(dataUrl);
   }
 
   function skipSignature() {
     closeModal('signature');
+    document.onmousemove = null; document.onmouseup = null;
     const cb = signatureCallback; signatureCallback = null;
     if (cb) cb(null);
   }
@@ -2920,13 +3419,15 @@
     const to = new Date(toStr);
     to.setHours(23, 59, 59, 999);
 
-    // Accrual basis: invoices issued within the period.
+    // Accrual basis: invoices issued within the period (مدين = revenue, دائن = liability, kept separate).
     const invoicesInRange = state.invoices.filter(i => i.issue && new Date(i.issue) >= from && new Date(i.issue) <= to);
-    const totalInvoiced = invoicesInRange.reduce((s, i) => s + Number(i.amount), 0);
+    const totalInvoicedLina = invoicesInRange.filter(i => !invoiceIsAlayna(i)).reduce((s, i) => s + Number(i.amount), 0);
+    const totalAlayna = invoicesInRange.filter(i => invoiceIsAlayna(i)).reduce((s, i) => s + Number(i.amount), 0);
 
     // Cash basis: payments actually received within the period (regardless of which invoice/date they belong to).
+    // Only مدين invoice payments count as money coming IN; دائن invoice "payments" represent the company paying OUT.
     let totalCollected = 0;
-    state.invoices.forEach(i => {
+    state.invoices.filter(i => !invoiceIsAlayna(i)).forEach(i => {
       getInvoicePayments(i).forEach(p => {
         if (p.date && new Date(p.date) >= from && new Date(p.date) <= to) totalCollected += Number(p.amount);
       });
@@ -2937,7 +3438,7 @@
     const byCategory = {};
     expensesInRange.forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + Number(e.amount); });
 
-    const netAccrual = totalInvoiced - totalExpenses;
+    const netAccrual = (totalInvoicedLina - totalAlayna) - totalExpenses;
     const netCash = totalCollected - totalExpenses;
 
     let html = pdfWrapStart('تقرير محاسبي / ضريبي');
@@ -2946,7 +3447,8 @@
     html += `<div style="height:1px;background:#ddd;margin-bottom:16px;"></div>`;
 
     html += `<div style="font-weight:700;color:#555;margin-bottom:8px;">الإيرادات</div>`;
-    html += rowHtml('إجمالي الفواتير المُصدرة (أساس الاستحقاق)', fmt(totalInvoiced));
+    html += rowHtml('إجمالي فواتير مدين المُصدرة (أساس الاستحقاق)', fmt(totalInvoicedLina));
+    html += rowHtml('إجمالي فواتير دائن (التزامات/مرتجعات)', `<span style="color:#b06ad6">${fmt(totalAlayna)}</span>`);
     html += rowHtml('إجمالي المُحصّل فعليًا (أساس نقدي)', fmt(totalCollected));
 
     html += `<div style="font-weight:700;color:#555;margin:18px 0 8px;">المصروفات حسب الفئة</div>`;
@@ -2955,7 +3457,7 @@
 
     html += `<div style="height:1px;background:#ddd;margin:18px 0;"></div>`;
     html += `<div style="font-weight:700;color:#555;margin-bottom:8px;">صافي الربح التقديري</div>`;
-    html += rowHtml('على أساس الاستحقاق (فواتير مُصدرة − مصروفات)', `<strong style="color:${netAccrual>=0?'#2ecc8a':'#e85555'}">${fmt(netAccrual)}</strong>`);
+    html += rowHtml('على أساس الاستحقاق (مدين − دائن − مصروفات)', `<strong style="color:${netAccrual>=0?'#2ecc8a':'#e85555'}">${fmt(netAccrual)}</strong>`);
     html += rowHtml('على أساس نقدي (محصّل فعليًا − مصروفات)', `<strong style="color:${netCash>=0?'#2ecc8a':'#e85555'}">${fmt(netCash)}</strong>`);
 
     html += `<div style="margin-top:20px;font-size:11px;color:#999;line-height:1.7;">هذا تقرير تقديري داخلي وليس مستندًا رسميًا معتمدًا من مصلحة الضرائب؛ يُنصح بمراجعته مع محاسب قانوني قبل أي استخدام رسمي.</div>`;
@@ -3086,7 +3588,10 @@
 
     let html = pdfWrapStart('فاتورة');
     html += `<div style="font-size:24px;font-weight:700;margin-bottom:6px;">فاتورة رقم ${inv.num}</div>`;
-    html += `<div style="display:inline-block;padding:4px 14px;border-radius:20px;background:${stColors[st.key]}22;color:${stColors[st.key]};font-weight:700;font-size:13px;margin-bottom:16px;">${st.label}</div>`;
+    html += `<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <div style="display:inline-block;padding:4px 14px;border-radius:20px;background:${stColors[st.key]}22;color:${stColors[st.key]};font-weight:700;font-size:13px;">${st.label}</div>
+      ${invoiceIsAlayna(inv) ? `<div style="display:inline-block;padding:4px 14px;border-radius:20px;background:#b06ad622;color:#b06ad6;font-weight:700;font-size:13px;">دائن — مستحق على الشركة</div>` : ''}
+    </div>`;
     html += `<div style="height:1px;background:#ddd;margin:16px 0;"></div>`;
     html += rowHtml('العميل', inv.client);
     html += rowHtml('المشروع', inv.project || '—');
@@ -3292,7 +3797,7 @@
     const invoiceRows = state.invoices.map(i => {
       const st = invoiceStatus(i);
       return {
-        'رقم الفاتورة': i.num, 'العميل': i.client, 'المشروع': i.project || '',
+        'رقم الفاتورة': i.num, 'النوع': invoiceTypeLabel(i), 'العميل': i.client, 'المشروع': i.project || '',
         'المبلغ': Number(i.amount), 'المدفوع': invoicePaidTotal(i), 'المتبقي': invoiceRemaining(i),
         'تاريخ الإصدار': i.issue || '', 'تاريخ الاستحقاق': i.due || '', 'الحالة': st.label,
         'أُنشئت بواسطة': i.createdBy || '', 'ملاحظات': i.notes || ''
@@ -3303,12 +3808,14 @@
       'المورد': e.supplier || '', 'المبلغ': Number(e.amount), 'أُنشئت بواسطة': e.createdBy || ''
     }));
     const projectRows = state.projects.map(p => {
-      const pinv = state.invoices.filter(i => i.project === p.name).reduce((s, i) => s + Number(i.amount), 0);
+      const projInvoices = state.invoices.filter(i => i.project === p.name);
+      const pinvLina = projInvoices.filter(i => !invoiceIsAlayna(i)).reduce((s, i) => s + Number(i.amount), 0);
+      const pinvAlayna = projInvoices.filter(i => invoiceIsAlayna(i)).reduce((s, i) => s + Number(i.amount), 0);
       const pexp = state.expenses.filter(e => e.project === p.name).reduce((s, e) => s + Number(e.amount), 0);
       return {
-        'المشروع': p.name, 'العميل': p.client || '', 'الحالة': p.status || '',
-        'الميزانية': Number(p.budget) || 0, 'إجمالي الفواتير': pinv, 'إجمالي المصروفات': pexp,
-        'صافي الربح': pinv - pexp, 'تاريخ البدء': p.start || '', 'التسليم المتوقع': p.expectedDelivery || ''
+        'المشروع': p.name, 'الكود': p.code || '', 'العميل': p.client || '', 'الحالة': p.status || '',
+        'الميزانية': Number(p.budget) || 0, 'إجمالي مدين': pinvLina, 'إجمالي دائن': pinvAlayna, 'إجمالي المصروفات': pexp,
+        'صافي الربح': (pinvLina - pinvAlayna) - pexp, 'تاريخ البدء': p.start || '', 'التسليم المتوقع': p.expectedDelivery || ''
       };
     });
     const clientRows = state.clients.map(c => {
@@ -3386,20 +3893,24 @@
   }
 
   async function exportSummaryPDF() {
-    const totalInv = state.invoices.reduce((s, i) => s + Number(i.amount), 0);
-    const collected = state.invoices.reduce((s, i) => s + invoicePaidTotal(i), 0);
-    const pending = state.invoices.reduce((s, i) => s + invoiceRemaining(i), 0);
+    const linaInvoices = state.invoices.filter(i => !invoiceIsAlayna(i));
+    const alaynaInvoices = state.invoices.filter(i => invoiceIsAlayna(i));
+    const totalInv = linaInvoices.reduce((s, i) => s + Number(i.amount), 0);
+    const totalAlayna = alaynaInvoices.reduce((s, i) => s + Number(i.amount), 0);
+    const collected = linaInvoices.reduce((s, i) => s + invoicePaidTotal(i), 0);
+    const pending = linaInvoices.reduce((s, i) => s + invoiceRemaining(i), 0);
     const totalExp = state.expenses.reduce((s, e) => s + Number(e.amount), 0);
-    const net = collected - totalExp;
+    const net = (totalInv - totalAlayna) - totalExp;
 
     let html = pdfWrapStart('التقرير المالي الشامل');
 
     html += `<div style="font-size:16px;font-weight:700;margin-bottom:10px;">نظرة عامة</div>`;
-    html += rowHtml('إجمالي الفواتير', fmt(totalInv));
+    html += rowHtml('إجمالي مدين (مستحق من العملاء)', fmt(totalInv));
+    html += rowHtml('إجمالي دائن (التزامات/مرتجعات)', `<span style="color:#b06ad6">${fmt(totalAlayna)}</span>`);
     html += rowHtml('المحصّل', `<span style="color:#2ecc8a">${fmt(collected)}</span>`);
     html += rowHtml('المعلّق', `<span style="color:#e8b84b">${fmt(pending)}</span>`);
     html += rowHtml('إجمالي المصروفات', `<span style="color:#e85555">${fmt(totalExp)}</span>`);
-    html += rowHtml('الصافي (المحصّل - المصروفات)', `<span style="font-weight:700;color:${net>=0?'#2ecc8a':'#e85555'}">${fmt(net)}</span>`);
+    html += rowHtml('الصافي (مدين − دائن − المصروفات)', `<span style="font-weight:700;color:${net>=0?'#2ecc8a':'#e85555'}">${fmt(net)}</span>`);
 
     html += `<div style="height:1px;background:#ddd;margin:24px 0;"></div>`;
     html += `<div style="font-size:16px;font-weight:700;margin-bottom:10px;">المشاريع</div>`;
@@ -3408,7 +3919,7 @@
     } else {
       let prows = '';
       state.projects.forEach(p => {
-        const pinv = state.invoices.filter(i => i.project === p.name).reduce((s, i) => s + Number(i.amount), 0);
+        const pinv = state.invoices.filter(i => i.project === p.name).reduce((s, i) => s + invoiceNetAmount(i), 0);
         const pexp = state.expenses.filter(e => e.project === p.name).reduce((s, e) => s + Number(e.amount), 0);
         prows += `<tr>
           <td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;">${p.name}</td>
@@ -3641,7 +4152,7 @@
     }
 
     const data = pendingRestoreData;
-    state = { invoices: data.invoices || [], expenses: data.expenses || [], projects: data.projects || [], clients: data.clients || [], suppliers: data.suppliers || [], quotes: data.quotes || [], trash: data.trash || [] };
+    state = { invoices: data.invoices || [], expenses: data.expenses || [], projects: data.projects || [], clients: data.clients || [], suppliers: data.suppliers || [], quotes: data.quotes || [], trash: data.trash || [], partners: data.partners || [] };
     await persist();
     logActivity('backup', 'restore', `⚠️ استرجاع نسخة احتياطية بتاريخ ${fmtDate(data.createdAt ? data.createdAt.split('T')[0] : today())} — استُبدلت جميع بيانات الشركة`);
     renderAll();
@@ -3805,7 +4316,7 @@
   let activityLastDoc = null;
   let activityLoadingMore = false;
   const ACTIVITY_PAGE_SIZE = 25;
-  const ACTIVITY_TYPE_LABELS = { invoice: 'فاتورة', expense: 'مصروف', project: 'مشروع', client: 'عميل', supplier: 'مورد', employee: 'موظف', backup: 'نسخة احتياطية' };
+  const ACTIVITY_TYPE_LABELS = { invoice: 'فاتورة', expense: 'مصروف', project: 'مشروع', client: 'عميل', supplier: 'مورد', partner: 'شريك', employee: 'موظف', backup: 'نسخة احتياطية' };
   const ACTIVITY_ACTION_COLORS = { create: 'var(--green)', update: 'var(--blue)', delete: 'var(--red)', payment: 'var(--green)', restore: 'var(--red)' };
 
   async function loadActivityLog(reset) {
@@ -4006,6 +4517,21 @@
     document.getElementById('inv-err').innerHTML = '';
   }
 
+  // ===== Area × price-per-sqm calculator (fills inv-amount automatically) =====
+
+  function toggleSqmCalculator() {
+    const row = document.getElementById('inv-sqm-calc-row');
+    row.style.display = row.style.display === 'none' ? '' : 'none';
+  }
+
+  function calcInvoiceAmountFromSqm() {
+    const area = Number(document.getElementById('inv-sqm-area').value);
+    const price = Number(document.getElementById('inv-sqm-price').value);
+    if (area > 0 && price > 0) {
+      document.getElementById('inv-amount').value = (area * price).toString();
+    }
+  }
+
   function saveInvoice() {
     const client = document.getElementById('inv-client').value.trim();
     const num = document.getElementById('inv-num').value.trim();
@@ -4018,6 +4544,7 @@
     let projectVal = document.getElementById('inv-project').value.trim();
     if (currentUserRole === 'engineer' && projectVal && !currentUserProjects.includes(projectVal)) projectVal = '';
     const editId = document.getElementById('inv-edit-id').value;
+    const type = document.getElementById('inv-type').value || 'madin';
 
     const duplicate = state.invoices.find(i => i.num === num && i.id !== editId);
     if (duplicate) {
@@ -4030,14 +4557,18 @@
       const inv = state.invoices.find(i => i.id === editId);
       if (!inv) return;
       if (currentUserRole === 'engineer' && !currentUserProjects.includes(inv.project)) return;
-      Object.assign(inv, { num, client, project: projectVal, amount: Number(amount), issue: document.getElementById('inv-issue').value, due, notes: document.getElementById('inv-notes').value.trim(), updatedBy: currentUserName, updatedAt: new Date().toISOString() });
+      Object.assign(inv, { num, type, client, project: projectVal, amount: Number(amount), issue: document.getElementById('inv-issue').value, due, notes: document.getElementById('inv-notes').value.trim(), updatedBy: currentUserName, updatedAt: new Date().toISOString() });
       logActivity('invoice', 'update', `تعديل فاتورة ${num} — ${client}`);
     } else {
-      state.invoices.push({ id: uid(), num, client, project: projectVal, amount: Number(amount), issue: document.getElementById('inv-issue').value, due, notes: document.getElementById('inv-notes').value.trim(), payments: [], createdBy: currentUserName, createdAt: new Date().toISOString() });
-      logActivity('invoice', 'create', `إضافة فاتورة ${num} — ${client} (${fmt(Number(amount))})`);
+      state.invoices.push({ id: uid(), num, type, client, project: projectVal, amount: Number(amount), issue: document.getElementById('inv-issue').value, due, notes: document.getElementById('inv-notes').value.trim(), payments: [], createdBy: currentUserName, createdAt: new Date().toISOString() });
+      logActivity('invoice', 'create', `إضافة فاتورة ${num} (${type === 'alayna' ? 'دائن' : 'مدين'}) — ${client} (${fmt(Number(amount))})`);
     }
     persist(); renderAll(); closeModal('invoice');
+    refreshProjectDetailIfOpen();
     ['inv-client','inv-num','inv-amount','inv-due','inv-notes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('inv-sqm-calc-row').style.display = 'none';
+    document.getElementById('inv-sqm-area').value = '';
+    document.getElementById('inv-sqm-price').value = '';
   }
 
   function saveExpense() {
@@ -4054,7 +4585,24 @@
     state.expenses.push({ id: uid(), desc, amount: Number(amount), date, category: document.getElementById('exp-cat').value, project: projectVal, supplier, createdBy: currentUserName, createdAt: new Date().toISOString() });
     logActivity('expense', 'create', `إضافة مصروف "${desc}" (${fmt(Number(amount))})`);
     persist(); renderAll(); closeModal('expense');
+    refreshProjectDetailIfOpen();
     ['exp-desc','exp-amount','exp-supplier'].forEach(id => document.getElementById(id).value = '');
+  }
+
+  // Generates the next project code by finding the highest existing numeric suffix
+  // and incrementing it (same pattern as invoice auto-numbering).
+  function generateProjectCode() {
+    const codes = state.projects.map(p => p.code || '');
+    let prefix = 'PRJ-';
+    let maxNum = 0;
+    codes.forEach(c => {
+      const m = c.match(/^([A-Za-z\u0600-\u06FF\-\/]*)(\d+)$/);
+      if (m) {
+        const candidate = parseInt(m[2], 10);
+        if (candidate > maxNum) { maxNum = candidate; prefix = m[1]; }
+      }
+    });
+    return prefix + String(maxNum + 1).padStart(3, '0');
   }
 
   function saveProject() {
@@ -4064,25 +4612,38 @@
       return;
     }
     const editId = document.getElementById('prj-edit-id').value;
+    const code = document.getElementById('prj-code').value.trim();
+
+    if (code) {
+      const duplicate = state.projects.find(p => p.code === code && p.id !== editId);
+      if (duplicate) {
+        document.getElementById('prj-err').innerHTML = `<div class="error-msg">كود المشروع "${code}" مستخدم من قبل للمشروع "${duplicate.name}". يرجى استخدام كود مختلف.</div>`;
+        return;
+      }
+    }
+
     const fields = {
       name,
+      code,
       client: document.getElementById('prj-client').value.trim(),
       budget: Number(document.getElementById('prj-budget').value) || 0,
       start: document.getElementById('prj-start').value,
       expectedDelivery: document.getElementById('prj-expected-delivery').value,
       status: document.getElementById('prj-status').value
     };
+    let savedId = editId;
     if (editId) {
       const p = state.projects.find(x => x.id === editId);
       if (!p) return;
       Object.assign(p, fields, { updatedBy: currentUserName, updatedAt: new Date().toISOString() });
       logActivity('project', 'update', `تعديل مشروع "${name}"`);
     } else {
-      state.projects.push({ id: uid(), ...fields, createdBy: currentUserName, createdAt: new Date().toISOString() });
-      logActivity('project', 'create', `إضافة مشروع "${name}"`);
+      savedId = uid();
+      state.projects.push({ id: savedId, ...fields, partnerShares: [], createdBy: currentUserName, createdAt: new Date().toISOString() });
+      logActivity('project', 'create', `إضافة مشروع "${name}" (${code || 'بدون كود'})`);
     }
-    persist(); renderAll(); closeModal('project');
-    ['prj-name','prj-client','prj-budget'].forEach(id => document.getElementById(id).value = '');
+    persist(); renderAll();
+    openProjectDetail(savedId); // refresh the page in place with the saved data
   }
 
   function markPaid(id) {
@@ -4096,6 +4657,7 @@
     inv.payments.push({ id: uid(), amount: remaining, date: today(), by: currentUserName, at: new Date().toISOString() });
     logActivity('invoice', 'payment', `سداد كامل لفاتورة ${inv.num} — ${fmt(remaining)}`);
     persist(); renderAll();
+    refreshProjectDetailIfOpen();
   }
 
   function addInvoicePayment() {
@@ -4114,6 +4676,7 @@
     logActivity('invoice', 'payment', `دفعة بقيمة ${fmt(amount)} لفاتورة ${inv.num}`);
     persist();
     renderAll();
+    refreshProjectDetailIfOpen();
     amountInput.value = '';
     openInvoiceDetail(editId); // refresh the modal in place to show the new payment
   }
@@ -4126,6 +4689,7 @@
     logActivity('invoice', 'delete', `حذف دفعة من فاتورة ${inv.num}`);
     persist();
     renderAll();
+    refreshProjectDetailIfOpen();
     openInvoiceDetail(invId);
   }
 
@@ -4188,7 +4752,7 @@
       el.innerHTML = '<div class="empty-state">سلة المحذوفات فارغة.</div>';
       return;
     }
-    const typeLabels = { invoices: 'فاتورة', expenses: 'مصروف', projects: 'مشروع', clients: 'عميل', suppliers: 'مورد', quotes: 'عرض سعر' };
+    const typeLabels = { invoices: 'فاتورة', expenses: 'مصروف', projects: 'مشروع', clients: 'عميل', suppliers: 'مورد', quotes: 'عرض سعر', partners: 'شريك' };
     el.innerHTML = state.trash.slice().reverse().map(t => {
       const daysLeft = Math.max(0, Math.ceil((new Date(t.expiresAt) - new Date()) / (1000*60*60*24)));
       return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
@@ -4219,6 +4783,21 @@
     state[type] = state[type].filter(i => i.id !== id);
     logActivity(type === 'invoices' ? 'invoice' : type === 'expenses' ? 'expense' : 'project', 'delete', `حذف ${typeLabels[type] || type}${itemLabel ? ' "' + itemLabel + '"' : ''}`);
     persist(); renderAll();
+    refreshProjectDetailIfOpen();
+  }
+
+  // Deletes the project currently open in the full-page view, then returns to the projects list.
+  function deleteProjectFromPage() {
+    const id = document.getElementById('prj-edit-id').value;
+    if (!id) return;
+    if (!isAdminOrIT()) return;
+    if (!confirm('هل تريد حذف هذا المشروع؟ يمكن استرجاعه لاحقًا من سلة المحذوفات خلال 30 يومًا.')) return;
+    const p = state.projects.find(x => x.id === id);
+    if (p) moveToTrash('projects', p, `مشروع: ${p.name}`);
+    state.projects = state.projects.filter(x => x.id !== id);
+    logActivity('project', 'delete', `حذف مشروع "${p ? p.name : ''}"`);
+    persist(); renderAll();
+    closeProjectDetailPage();
   }
 
   document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
