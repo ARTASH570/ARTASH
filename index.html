@@ -977,54 +977,6 @@
   </div>
 </div>
 
-<!-- نافذة العميل -->
-<div class="modal-overlay" id="modal-client">
-  <div class="modal">
-    <div class="modal-title" id="client-modal-title">عميل جديد</div>
-    <input type="hidden" id="client-edit-id" value="" />
-    <div id="client-err"></div>
-    <div class="form-grid">
-      <div class="form-group full"><label>الاسم *</label><input id="client-name" placeholder="اسم العميل أو الشركة" /></div>
-      <div class="form-group full"><label>رقم الهاتف</label><input id="client-phone" type="tel" placeholder="01xxxxxxxxx" /></div>
-      <div class="form-group full"><label>العنوان</label><input id="client-address" placeholder="العنوان (اختياري)" /></div>
-      <div class="form-group full"><label>ملاحظات</label><textarea id="client-notes" placeholder="ملاحظات اختيارية…"></textarea></div>
-    </div>
-    <div id="client-summary-section" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;"></div>
-    <div class="modal-actions">
-      <button class="btn btn-accent" id="client-save-btn" onclick="saveClient()">حفظ</button>
-      <button class="btn" onclick="closeModal('client')">إغلاق</button>
-    </div>
-  </div>
-</div>
-
-<!-- نافذة المورد -->
-<div class="modal-overlay" id="modal-supplier">
-  <div class="modal">
-    <div class="modal-title" id="supplier-modal-title">مورد جديد</div>
-    <input type="hidden" id="supplier-edit-id" value="" />
-    <div id="supplier-err"></div>
-    <div class="form-grid">
-      <div class="form-group full"><label>الاسم *</label><input id="supplier-name" placeholder="اسم المورد أو الشركة" /></div>
-      <div class="form-group"><label>رقم الهاتف</label><input id="supplier-phone" type="tel" placeholder="01xxxxxxxxx" /></div>
-      <div class="form-group"><label>النوع</label>
-        <select id="supplier-category">
-          <option value="مواد">مواد</option>
-          <option value="عمالة">عمالة</option>
-          <option value="معدات">معدات</option>
-          <option value="نقل">نقل</option>
-          <option value="أخرى">أخرى</option>
-        </select>
-      </div>
-      <div class="form-group full"><label>ملاحظات</label><textarea id="supplier-notes" placeholder="ملاحظات اختيارية…"></textarea></div>
-    </div>
-    <div id="supplier-summary-section" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;"></div>
-    <div class="modal-actions">
-      <button class="btn btn-accent" id="supplier-save-btn" onclick="saveSupplier()">حفظ</button>
-      <button class="btn" onclick="closeModal('supplier')">إغلاق</button>
-    </div>
-  </div>
-</div>
-
 <!-- نافذة الشريك -->
 <div class="modal-overlay" id="modal-partner">
   <div class="modal">
@@ -3146,20 +3098,6 @@
   function renderAll() { renderDashboard(); renderInvoices(); renderExpenses(); renderProjects(); renderQuotes(); renderPartners(); }
 
   // ===== Clients directory =====
-
-  function populateSuppliersDatalistForProject() {
-    const dl = document.getElementById('suppliers-datalist');
-    if (!dl) return;
-    const projectDetailVisible = document.getElementById('tab-project-detail')?.classList.contains('visible');
-    const projectId = document.getElementById('prj-edit-id')?.value;
-    if (projectDetailVisible && projectId) {
-      const p = state.projects.find(x => x.id === projectId);
-      const projectSuppliers = p?.projectSuppliers || [];
-      dl.innerHTML = projectSuppliers.map(s => `<option value="${s.name}">`).join('');
-    } else {
-      dl.innerHTML = state.suppliers.map(s => `<option value="${s.name}">`).join('');
-    }
-  }
 
   // ===== Suppliers directory =====
 
