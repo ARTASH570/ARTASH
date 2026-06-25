@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Artash</title>
-  <meta name="app-version" content="24" />
+  <meta name="app-version" content="23" />
   <meta name="description" content="نظام تتبع مالي وفواتير لشركات المقاولات" />
   <meta name="theme-color" content="#1a1a2e" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -504,6 +504,11 @@
           <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
             <button class="btn btn-sm btn-accent" id="prj-add-invoice-btn" onclick="quickAddForProject('invoice')">+ فاتورة لهذا المشروع</button>
             <button class="btn btn-sm btn-accent" id="prj-add-expense-btn" onclick="quickAddForProject('expense')">+ مصروف لهذا المشروع</button>
+            <button class="btn btn-sm" id="prj-add-client-from-excel-btn" onclick="document.getElementById('prj-excel-import-input').click()" style="background:var(--green-bg);color:var(--green);border-color:rgba(46,204,138,0.3);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg>
+              استيراد Excel
+            </button>
+            <input type="file" id="prj-excel-import-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="importProjectExcel(event)" />
             <button class="btn btn-sm btn-pdf" id="prj-handover-btn" onclick="exportProjectHandoverPDF(document.getElementById('prj-edit-id').value)">إيصال تسليم</button>
             <button class="btn btn-sm btn-pdf" onclick="exportProjectReportPDF()">تقرير المشروع PDF</button>
           </div>
@@ -1118,6 +1123,19 @@
   </div>
 </div>
 
+<!-- نافذة استيراد Excel للمشروع -->
+<div class="modal-overlay" id="modal-excel-import">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-title">استيراد بيانات من Excel</div>
+    <div id="excel-import-preview" style="margin-bottom:14px;"></div>
+    <div id="excel-import-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-accent" id="excel-import-confirm-btn" onclick="confirmImportProjectExcel()" style="display:none">تأكيد الاستيراد</button>
+      <button class="btn" onclick="closeModal('excel-import')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <!-- نافذة عميل المشروع -->
 <div class="modal-overlay" id="modal-project-client">
   <div class="modal">
@@ -1230,7 +1248,6 @@
   db.enablePersistence().catch(() => {});
 
   const COMPANY_DOC = db.collection('company').doc('main');
-  const PROJECTS_COL = db.collection('projects'); // each project = separate doc
   const BACKUPS_COL = db.collection('backups');
   const SETTINGS_DOC = db.collection('company').doc('settings');
   const ACTIVITY_COL = db.collection('activity');
@@ -2665,27 +2682,24 @@
     }, 0);
   }
 
-  let unsubscribeProjectsSync = null;
-
   function setupSync() {
     if (unsubscribeSync) unsubscribeSync();
-    if (unsubscribeProjectsSync) unsubscribeProjectsSync();
-
-    // Listen to main doc (invoices, expenses, quotes, partners, trash)
     unsubscribeSync = COMPANY_DOC.onSnapshot(doc => {
       if (doc.exists) {
         const data = doc.data();
-        state.invoices = data.invoices || [];
-        state.expenses = data.expenses || [];
-        state.clients  = data.clients  || [];
-        state.suppliers= data.suppliers|| [];
-        state.quotes   = data.quotes   || [];
-        state.trash    = data.trash    || [];
-        state.partners = data.partners || [];
+        state = {
+          invoices: data.invoices || [],
+          expenses: data.expenses || [],
+          projects: data.projects || [],
+          clients: data.clients || [],
+          suppliers: data.suppliers || [],
+          quotes: data.quotes || [],
+          trash: data.trash || [],
+          partners: data.partners || []
+        };
       } else {
-        state.invoices=[]; state.expenses=[]; state.clients=[];
-        state.suppliers=[]; state.quotes=[]; state.trash=[]; state.partners=[];
-        COMPANY_DOC.set({ invoices:[], expenses:[], clients:[], suppliers:[], quotes:[], trash:[], partners:[] }).catch(()=>{});
+        state = { invoices: [], expenses: [], projects: [], clients: [], suppliers: [], quotes: [], trash: [], partners: [] };
+        COMPANY_DOC.set(state).catch(() => {});
       }
       renderAll();
       setSyncing(false);
@@ -2695,46 +2709,20 @@
       }
       handlePendingDeepLink();
     }, err => { console.error('Sync error:', err); });
-
-    // Listen to projects collection separately — each project is its own doc
-    unsubscribeProjectsSync = PROJECTS_COL.onSnapshot(snap => {
-      state.projects = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderAll();
-    }, err => { console.error('Projects sync error:', err); });
   }
 
   async function persist() {
     setSyncing(true);
     try {
-      // Save main data (without projects array — projects live in their own collection)
-      const { projects, ...mainData } = state;
-      await COMPANY_DOC.set(mainData);
+      await COMPANY_DOC.set(state);
     } catch(e) {
       console.error('Save error:', e);
     }
     setSyncing(false);
   }
 
-  // Save a single project to its own Firestore document
-  async function persistProject(project) {
-    setSyncing(true);
-    try {
-      const { id, ...data } = project;
-      await PROJECTS_COL.doc(id).set(data);
-    } catch(e) {
-      console.error('Save project error:', e);
-    }
-    setSyncing(false);
-  }
-
-  // Delete a single project document
-  async function deleteProjectDoc(projectId) {
-    try {
-      await PROJECTS_COL.doc(projectId).delete();
-    } catch(e) {
-      console.error('Delete project error:', e);
-    }
-  }
+  async function persistProject(p) { await persist(); }
+  async function deleteProjectDoc(id) { await persist(); }
 
   let isOnline = navigator.onLine;
 
@@ -5856,6 +5844,149 @@
     persistProject(p);
     renderProjectSuppliers(p);
     closeModal('project-supplier');
+  }
+
+  // ===== استيراد Excel للمشروع =====
+  // الشيت المتوقع: عمود "النوع" (عميل/مورد) + "الاسم" + "الإجمالي" + "المدفوع/المحصّل" + "المتبقي"
+  // كل الأعمدة اختيارية ما عدا الاسم والنوع
+
+  let excelImportData = null; // cached parsed data waiting for confirmation
+
+  function importProjectExcel(event) {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const projectId = document.getElementById('prj-edit-id').value;
+    if (!projectId) { alert('يرجى حفظ المشروع أولاً قبل الاستيراد.'); return; }
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        if (!rows.length) {
+          document.getElementById('excel-import-preview').innerHTML =
+            '<div class="error-msg">الملف فارغ أو لا يحتوي على بيانات.</div>';
+          document.getElementById('modal-excel-import').classList.add('open');
+          return;
+        }
+
+        // Normalize column names — flexible matching
+        const normalize = s => String(s||'').trim().toLowerCase()
+          .replace(/\s+/g,'').replace(/[أإآا]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
+
+        const findCol = (row, candidates) => {
+          const keys = Object.keys(row);
+          for (const k of keys) {
+            if (candidates.some(c => normalize(k).includes(normalize(c)))) return k;
+          }
+          return null;
+        };
+
+        const firstRow = rows[0];
+        const colType     = findCol(firstRow, ['النوع','نوع','type']);
+        const colName     = findCol(firstRow, ['الاسم','اسم','name']);
+        const colTotal    = findCol(firstRow, ['الاجمالي','الإجمالي','اجمالي','إجمالي','total','المبلغ']);
+        const colPaid     = findCol(firstRow, ['المدفوع','المحصل','المحصّل','دفع','حصل','paid']);
+        const colRemain   = findCol(firstRow, ['المتبقي','متبقي','remaining','باقي']);
+
+        if (!colName) {
+          document.getElementById('excel-import-preview').innerHTML =
+            '<div class="error-msg">لم يتم العثور على عمود "الاسم". تأكد إن الشيت فيه عمود باسم الاسم.</div>';
+          document.getElementById('modal-excel-import').classList.add('open');
+          return;
+        }
+
+        const clients = [], suppliers = [];
+        let skipped = 0;
+
+        rows.forEach(row => {
+          const name = String(row[colName] || '').trim();
+          if (!name) { skipped++; return; }
+
+          const typeRaw = colType ? String(row[colType] || '').trim() : '';
+          const isSupplier = typeRaw && (normalize(typeRaw).includes('مورد') || normalize(typeRaw).includes('supplier'));
+          const isClient   = !isSupplier; // default to client if type unclear
+
+          const total   = Number(String(row[colTotal]  || '').replace(/,/g,'')) || 0;
+          const paid    = Number(String(row[colPaid]   || '').replace(/,/g,'')) || 0;
+          const remain  = colRemain
+            ? (Number(String(row[colRemain] || '').replace(/,/g,'')) || Math.max(0, total - paid))
+            : Math.max(0, total - paid);
+
+          const entry = { id: uid(), name, total, paid, remaining: remain, payments: paid > 0 ? [{ id: uid(), amount: paid, date: today(), by: `استيراد Excel`, at: new Date().toISOString() }] : [], createdBy: currentUserName, createdAt: new Date().toISOString() };
+
+          if (isSupplier) suppliers.push({ ...entry, category: 'أخرى' });
+          else clients.push(entry);
+        });
+
+        excelImportData = { clients, suppliers, skipped };
+
+        // Show preview
+        let html = '';
+        if (clients.length) {
+          html += `<div style="font-weight:700;color:var(--text2);margin-bottom:6px;">عملاء (${clients.length})</div>`;
+          html += `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px;max-height:160px;overflow-y:auto;">`;
+          html += clients.map(c => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;"><span>${c.name}</span><span style="color:var(--green)">${c.total > 0 ? fmt(c.total) : '—'} | متبقي: ${fmt(c.remaining)}</span></div>`).join('');
+          html += '</div>';
+        }
+        if (suppliers.length) {
+          html += `<div style="font-weight:700;color:var(--text2);margin-bottom:6px;">موردون (${suppliers.length})</div>`;
+          html += `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px;max-height:160px;overflow-y:auto;">`;
+          html += suppliers.map(s => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;"><span>${s.name}</span><span style="color:var(--amber)">${s.total > 0 ? fmt(s.total) : '—'} | متبقي: ${fmt(s.remaining)}</span></div>`).join('');
+          html += '</div>';
+        }
+        if (skipped > 0) html += `<div style="font-size:12px;color:var(--text3);">تم تخطي ${skipped} صف فارغ.</div>`;
+        if (!clients.length && !suppliers.length) {
+          html = '<div class="error-msg">لم يتم العثور على بيانات صالحة للاستيراد.</div>';
+          document.getElementById('excel-import-confirm-btn').style.display = 'none';
+        } else {
+          document.getElementById('excel-import-confirm-btn').style.display = '';
+        }
+
+        document.getElementById('excel-import-preview').innerHTML = html;
+        document.getElementById('excel-import-err').innerHTML = '';
+        document.getElementById('modal-excel-import').classList.add('open');
+
+      } catch(err) {
+        console.error(err);
+        alert('تعذّر قراءة الملف. تأكد إنه ملف Excel صحيح (.xlsx أو .xls).');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function confirmImportProjectExcel() {
+    if (!excelImportData) return;
+    const projectId = document.getElementById('prj-edit-id').value;
+    const p = state.projects.find(x => x.id === projectId);
+    if (!p) return;
+
+    const { clients, suppliers } = excelImportData;
+
+    if (!Array.isArray(p.projectClients)) p.projectClients = [];
+    if (!Array.isArray(p.projectSuppliers)) p.projectSuppliers = [];
+
+    // Add without overwriting existing entries
+    clients.forEach(c => {
+      if (!p.projectClients.find(x => x.name === c.name)) p.projectClients.push(c);
+    });
+    suppliers.forEach(s => {
+      if (!p.projectSuppliers.find(x => x.name === s.name)) p.projectSuppliers.push(s);
+    });
+
+    logActivity('project', 'update',
+      `استيراد Excel لمشروع "${p.name}": ${clients.length} عميل، ${suppliers.length} مورد`);
+
+    persist();
+    renderProjectClients(p);
+    renderProjectSuppliers(p);
+    excelImportData = null;
+    closeModal('excel-import');
+    alert(`✅ تم الاستيراد بنجاح: ${clients.length} عميل و${suppliers.length} مورد.`);
   }
 
   async function exportProjectClientPDF() {
