@@ -1,17 +1,33 @@
 {
-  "name": "بيلد فاينانس - مالية المقاولات",
-  "short_name": "بيلد فاينانس",
+  "name": "Artash — إدارة المقاولات",
+  "short_name": "Artash",
   "description": "نظام تتبع مالي وفواتير لشركات المقاولات",
-  "start_url": "/",
+  "start_url": "/artash24.html",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0f0f1a",
   "theme_color": "#1a1a2e",
-  "orientation": "portrait-primary",
   "lang": "ar",
   "dir": "rtl",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ],
-  "categories": ["finance", "business", "productivity"]
+  "categories": ["business", "finance"],
+  "shortcuts": [
+    {
+      "name": "المشاريع",
+      "short_name": "مشاريع",
+      "url": "/artash24.html#projects",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "التقارير",
+      "short_name": "تقارير",
+      "url": "/artash24.html#reports",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }
