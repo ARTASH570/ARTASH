@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Artash</title>
-  <meta name="app-version" content="23" />
+  <meta name="app-version" content="26" />
   <meta name="description" content="نظام تتبع مالي وفواتير لشركات المقاولات" />
   <meta name="theme-color" content="#1a1a2e" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1125,12 +1125,15 @@
 
 <!-- نافذة استيراد Excel للمشروع -->
 <div class="modal-overlay" id="modal-excel-import">
-  <div class="modal" style="max-width:560px;">
-    <div class="modal-title">استيراد بيانات من Excel</div>
-    <div id="excel-import-preview" style="margin-bottom:14px;"></div>
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-title">
+      <span>استيراد بيانات من Excel</span>
+      <span id="excel-import-step-label" style="font-size:12px;color:var(--text3);font-weight:400;margin-right:10px;"></span>
+    </div>
+    <div id="excel-import-preview" style="margin-bottom:14px;max-height:65vh;overflow-y:auto;"></div>
     <div id="excel-import-err"></div>
     <div class="modal-actions">
-      <button class="btn btn-accent" id="excel-import-confirm-btn" onclick="confirmImportProjectExcel()" style="display:none">تأكيد الاستيراد</button>
+      <button class="btn btn-accent" id="excel-import-confirm-btn" style="display:none">تأكيد</button>
       <button class="btn" onclick="closeModal('excel-import')">إغلاق</button>
     </div>
   </div>
@@ -5846,11 +5849,43 @@
     closeModal('project-supplier');
   }
 
-  // ===== استيراد Excel للمشروع =====
-  // الشيت المتوقع: عمود "النوع" (عميل/مورد) + "الاسم" + "الإجمالي" + "المدفوع/المحصّل" + "المتبقي"
-  // كل الأعمدة اختيارية ما عدا الاسم والنوع
+  // ===== استيراد Excel الذكي للمشروع =====
+  // المرحلة 1: قراءة الملف + محاولة التعرف التلقائي على الأعمدة
+  // المرحلة 2: لو في أعمدة مش واضحة — يعرض على المستخدم يختار
+  // المرحلة 3: معاينة النتيجة + تأكيد الاستيراد
 
-  let excelImportData = null; // cached parsed data waiting for confirmation
+  let excelImportData = null;
+  let excelRawRows = null;
+  let excelColumns = [];
+
+  // تطبيع النص للمقارنة الذكية
+  const normalizeText = s => String(s||'').trim().toLowerCase()
+    .replace(/\s+/g,'')
+    .replace(/[أإآا]/g,'ا')
+    .replace(/ة/g,'ه')
+    .replace(/ى/g,'ي')
+    .replace(/،/g,'');
+
+  // قاموس التعرف الذكي على الأعمدة
+  const COLUMN_PATTERNS = {
+    type:     ['النوع','نوع','type','صنف','تصنيف','category'],
+    name:     ['الاسم','اسم','name','العميل','المورد','client','supplier','الجهه','الجهة','vendor'],
+    total:    ['الاجمالي','الإجمالي','اجمالي','إجمالي','total','المبلغ','قيمة','القيمة','amount','المستحق','الاجمال'],
+    paid:     ['المدفوع','المحصل','المحصّل','دفع','حصل','paid','collected','سدد','المسدد','تحصيل','الوارد'],
+    remaining:['المتبقي','متبقي','remaining','باقي','الباقي','المتبق','رصيد','الرصيد','balance'],
+    notes:    ['ملاحظات','ملاحظه','notes','note','تعليق','بيان'],
+  };
+
+  function detectColumn(headers, fieldKey) {
+    const patterns = COLUMN_PATTERNS[fieldKey] || [];
+    for (const h of headers) {
+      const hn = normalizeText(h);
+      if (patterns.some(p => hn.includes(normalizeText(p)) || normalizeText(p).includes(hn))) {
+        return h;
+      }
+    }
+    return null;
+  }
 
   function importProjectExcel(event) {
     const file = event.target.files[0];
@@ -5868,88 +5903,34 @@
         const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
         if (!rows.length) {
-          document.getElementById('excel-import-preview').innerHTML =
-            '<div class="error-msg">الملف فارغ أو لا يحتوي على بيانات.</div>';
-          document.getElementById('modal-excel-import').classList.add('open');
+          showExcelError('الملف فارغ أو لا يحتوي على بيانات.');
           return;
         }
 
-        // Normalize column names — flexible matching
-        const normalize = s => String(s||'').trim().toLowerCase()
-          .replace(/\s+/g,'').replace(/[أإآا]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
+        excelRawRows = rows;
+        excelColumns = Object.keys(rows[0]);
 
-        const findCol = (row, candidates) => {
-          const keys = Object.keys(row);
-          for (const k of keys) {
-            if (candidates.some(c => normalize(k).includes(normalize(c)))) return k;
-          }
-          return null;
-        };
-
-        const firstRow = rows[0];
-        const colType     = findCol(firstRow, ['النوع','نوع','type']);
-        const colName     = findCol(firstRow, ['الاسم','اسم','name']);
-        const colTotal    = findCol(firstRow, ['الاجمالي','الإجمالي','اجمالي','إجمالي','total','المبلغ']);
-        const colPaid     = findCol(firstRow, ['المدفوع','المحصل','المحصّل','دفع','حصل','paid']);
-        const colRemain   = findCol(firstRow, ['المتبقي','متبقي','remaining','باقي']);
-
-        if (!colName) {
-          document.getElementById('excel-import-preview').innerHTML =
-            '<div class="error-msg">لم يتم العثور على عمود "الاسم". تأكد إن الشيت فيه عمود باسم الاسم.</div>';
-          document.getElementById('modal-excel-import').classList.add('open');
-          return;
+        // محاولة التعرف التلقائي
+        const detected = {};
+        for (const field of Object.keys(COLUMN_PATTERNS)) {
+          detected[field] = detectColumn(excelColumns, field);
         }
 
-        const clients = [], suppliers = [];
-        let skipped = 0;
+        // الحقول اللي ما اتعرفتش
+        const unclear = [];
+        if (!detected.name) unclear.push('name');
+        // type وpaid وremaining اختيارية — بس نسأل لو مش واضحة وفي أعمدة محتملة
+        if (!detected.type && excelColumns.length > 1) unclear.push('type');
+        if (!detected.paid && excelColumns.length > 2) unclear.push('paid');
+        if (!detected.total && excelColumns.length > 1) unclear.push('total');
 
-        rows.forEach(row => {
-          const name = String(row[colName] || '').trim();
-          if (!name) { skipped++; return; }
-
-          const typeRaw = colType ? String(row[colType] || '').trim() : '';
-          const isSupplier = typeRaw && (normalize(typeRaw).includes('مورد') || normalize(typeRaw).includes('supplier'));
-          const isClient   = !isSupplier; // default to client if type unclear
-
-          const total   = Number(String(row[colTotal]  || '').replace(/,/g,'')) || 0;
-          const paid    = Number(String(row[colPaid]   || '').replace(/,/g,'')) || 0;
-          const remain  = colRemain
-            ? (Number(String(row[colRemain] || '').replace(/,/g,'')) || Math.max(0, total - paid))
-            : Math.max(0, total - paid);
-
-          const entry = { id: uid(), name, total, paid, remaining: remain, payments: paid > 0 ? [{ id: uid(), amount: paid, date: today(), by: `استيراد Excel`, at: new Date().toISOString() }] : [], createdBy: currentUserName, createdAt: new Date().toISOString() };
-
-          if (isSupplier) suppliers.push({ ...entry, category: 'أخرى' });
-          else clients.push(entry);
-        });
-
-        excelImportData = { clients, suppliers, skipped };
-
-        // Show preview
-        let html = '';
-        if (clients.length) {
-          html += `<div style="font-weight:700;color:var(--text2);margin-bottom:6px;">عملاء (${clients.length})</div>`;
-          html += `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px;max-height:160px;overflow-y:auto;">`;
-          html += clients.map(c => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;"><span>${c.name}</span><span style="color:var(--green)">${c.total > 0 ? fmt(c.total) : '—'} | متبقي: ${fmt(c.remaining)}</span></div>`).join('');
-          html += '</div>';
-        }
-        if (suppliers.length) {
-          html += `<div style="font-weight:700;color:var(--text2);margin-bottom:6px;">موردون (${suppliers.length})</div>`;
-          html += `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px;max-height:160px;overflow-y:auto;">`;
-          html += suppliers.map(s => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;"><span>${s.name}</span><span style="color:var(--amber)">${s.total > 0 ? fmt(s.total) : '—'} | متبقي: ${fmt(s.remaining)}</span></div>`).join('');
-          html += '</div>';
-        }
-        if (skipped > 0) html += `<div style="font-size:12px;color:var(--text3);">تم تخطي ${skipped} صف فارغ.</div>`;
-        if (!clients.length && !suppliers.length) {
-          html = '<div class="error-msg">لم يتم العثور على بيانات صالحة للاستيراد.</div>';
-          document.getElementById('excel-import-confirm-btn').style.display = 'none';
+        if (unclear.length > 0) {
+          // عرض شاشة تعيين الأعمدة
+          showColumnMappingUI(detected, unclear);
         } else {
-          document.getElementById('excel-import-confirm-btn').style.display = '';
+          // كل حاجة اتعرفت — روح للمعاينة مباشرة
+          processExcelWithMapping(detected);
         }
-
-        document.getElementById('excel-import-preview').innerHTML = html;
-        document.getElementById('excel-import-err').innerHTML = '';
-        document.getElementById('modal-excel-import').classList.add('open');
 
       } catch(err) {
         console.error(err);
@@ -5959,6 +5940,165 @@
     reader.readAsArrayBuffer(file);
   }
 
+  const FIELD_LABELS = {
+    name:      'اسم العميل / المورد *',
+    type:      'النوع (عميل / مورد)',
+    total:     'إجمالي المبلغ',
+    paid:      'المدفوع / المحصّل',
+    remaining: 'المتبقي',
+    notes:     'ملاحظات',
+  };
+
+  function showExcelError(msg) {
+    document.getElementById('excel-import-preview').innerHTML =
+      `<div class="error-msg">${msg}</div>`;
+    document.getElementById('excel-import-confirm-btn').style.display = 'none';
+    document.getElementById('modal-excel-import').classList.add('open');
+  }
+
+  function showColumnMappingUI(detected, unclear) {
+    const colOptions = ['— تجاهل هذا الحقل —', ...excelColumns]
+      .map(c => `<option value="${c}">${c}</option>`).join('');
+
+    let html = `<div style="font-size:13px;color:var(--text2);margin-bottom:14px;">
+      تم اكتشاف <strong>${excelColumns.length} عمود</strong> في الملف.
+      ساعدنا نربط الأعمدة بالحقول الصح:
+    </div>`;
+
+    // كل الحقول — سواء اتعرفت أو لا
+    for (const field of ['name','type','total','paid','remaining','notes']) {
+      const detectedVal = detected[field] || '';
+      const isRequired = field === 'name';
+      const label = FIELD_LABELS[field];
+      const selectOptions = excelColumns.map(c =>
+        `<option value="${c}" ${c === detectedVal ? 'selected' : ''}>${c}</option>`
+      ).join('');
+
+      html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+        <div style="min-width:160px;font-size:13px;color:var(--text2);">${label}</div>
+        <select id="excel-map-${field}" style="flex:1;min-width:160px;background:var(--surface2);">
+          ${isRequired ? '' : '<option value="">— تجاهل —</option>'}
+          ${selectOptions}
+        </select>
+        ${detectedVal ? `<span style="font-size:11px;color:var(--green);">✓ تم اكتشافه تلقائياً</span>` : `<span style="font-size:11px;color:var(--amber);">لم يُكتشف</span>`}
+      </div>`;
+    }
+
+    // معاينة أول 3 صفوف
+    html += `<div style="font-size:12px;color:var(--text3);margin-top:10px;margin-bottom:6px;">معاينة أول 3 صفوف من الملف:</div>`;
+    html += `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;">`;
+    html += `<thead><tr>${excelColumns.map(c => `<th style="padding:5px;background:var(--surface2);border:1px solid var(--border);white-space:nowrap;">${c}</th>`).join('')}</tr></thead>`;
+    html += `<tbody>`;
+    excelRawRows.slice(0, 3).forEach(row => {
+      html += `<tr>${excelColumns.map(c => `<td style="padding:5px;border:1px solid var(--border);white-space:nowrap;">${String(row[c]||'').slice(0,20)}</td>`).join('')}</tr>`;
+    });
+    html += `</tbody></table></div>`;
+
+    document.getElementById('excel-import-preview').innerHTML = html;
+    document.getElementById('excel-import-confirm-btn').style.display = '';
+    document.getElementById('excel-import-confirm-btn').textContent = 'تأكيد التعيين والمعاينة';
+    document.getElementById('excel-import-confirm-btn').onclick = applyColumnMapping;
+    document.getElementById('modal-excel-import').classList.add('open');
+  }
+
+  function applyColumnMapping() {
+    const mapping = {};
+    for (const field of ['name','type','total','paid','remaining','notes']) {
+      const val = document.getElementById(`excel-map-${field}`)?.value || '';
+      mapping[field] = val || null;
+    }
+    if (!mapping.name) {
+      document.getElementById('excel-import-err').innerHTML =
+        '<div class="error-msg">يرجى تحديد عمود "اسم العميل / المورد" على الأقل.</div>';
+      return;
+    }
+    document.getElementById('excel-import-err').innerHTML = '';
+    processExcelWithMapping(mapping);
+  }
+
+  function processExcelWithMapping(mapping) {
+    const clients = [], suppliers = [];
+    let skipped = 0;
+
+    excelRawRows.forEach(row => {
+      const name = String(row[mapping.name] || '').trim();
+      if (!name) { skipped++; return; }
+
+      const typeRaw = mapping.type ? String(row[mapping.type] || '').trim() : '';
+      const tn = normalizeText(typeRaw);
+      const isSupplier = tn && (tn.includes('مورد') || tn.includes('supplier') || tn.includes('vendor'));
+
+      const parseNum = col => col ? (Number(String(row[col]||'').replace(/,/g,'').replace(/\s/g,'')) || 0) : 0;
+      const total     = parseNum(mapping.total);
+      const paid      = parseNum(mapping.paid);
+      const remaining = mapping.remaining
+        ? (parseNum(mapping.remaining) || Math.max(0, total - paid))
+        : Math.max(0, total - paid);
+      const notes = mapping.notes ? String(row[mapping.notes] || '').trim() : '';
+
+      const entry = {
+        id: uid(), name, total, paid, remaining, notes,
+        payments: paid > 0 ? [{
+          id: uid(), amount: paid, date: today(),
+          by: 'استيراد Excel', at: new Date().toISOString()
+        }] : [],
+        createdBy: currentUserName,
+        createdAt: new Date().toISOString()
+      };
+
+      if (isSupplier) suppliers.push({ ...entry, category: 'أخرى' });
+      else clients.push(entry);
+    });
+
+    excelImportData = { clients, suppliers, skipped };
+
+    // عرض معاينة النتيجة
+    let html = '';
+
+    if (clients.length) {
+      html += `<div style="font-weight:700;color:var(--text2);margin-bottom:6px;">عملاء (${clients.length})</div>`;
+      html += `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px;max-height:180px;overflow-y:auto;">`;
+      html += clients.map(c => `
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">
+          <span style="font-weight:600;">${c.name}</span>
+          <span style="color:var(--text3);">
+            ${c.total > 0 ? `إجمالي: <strong style="color:var(--blue)">${fmt(c.total)}</strong>` : ''}
+            ${c.paid > 0 ? ` | محصّل: <strong style="color:var(--green)">${fmt(c.paid)}</strong>` : ''}
+            ${c.remaining > 0 ? ` | متبقي: <strong style="color:var(--red)">${fmt(c.remaining)}</strong>` : ' | <span style="color:var(--green)">✓ مسدد</span>'}
+          </span>
+        </div>`).join('');
+      html += '</div>';
+    }
+
+    if (suppliers.length) {
+      html += `<div style="font-weight:700;color:var(--text2);margin-bottom:6px;">موردون (${suppliers.length})</div>`;
+      html += `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px;max-height:180px;overflow-y:auto;">`;
+      html += suppliers.map(s => `
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">
+          <span style="font-weight:600;">${s.name}</span>
+          <span style="color:var(--text3);">
+            ${s.total > 0 ? `إجمالي: <strong style="color:var(--blue)">${fmt(s.total)}</strong>` : ''}
+            ${s.paid > 0 ? ` | مدفوع: <strong style="color:var(--red)">${fmt(s.paid)}</strong>` : ''}
+            ${s.remaining > 0 ? ` | متبقي له: <strong style="color:var(--amber)">${fmt(s.remaining)}</strong>` : ' | <span style="color:var(--green)">✓ مسوّى</span>'}
+          </span>
+        </div>`).join('');
+      html += '</div>';
+    }
+
+    if (!clients.length && !suppliers.length) {
+      html = '<div class="error-msg">لم يتم العثور على بيانات صالحة. تأكد من تعيين الأعمدة الصح.</div>';
+      document.getElementById('excel-import-confirm-btn').style.display = 'none';
+    } else {
+      if (skipped > 0) html += `<div style="font-size:12px;color:var(--text3);margin-top:6px;">تم تخطي ${skipped} صف فارغ.</div>`;
+      document.getElementById('excel-import-confirm-btn').style.display = '';
+      document.getElementById('excel-import-confirm-btn').textContent = `تأكيد الاستيراد (${clients.length + suppliers.length} سجل)`;
+      document.getElementById('excel-import-confirm-btn').onclick = confirmImportProjectExcel;
+    }
+
+    document.getElementById('excel-import-preview').innerHTML = html;
+    document.getElementById('excel-import-err').innerHTML = '';
+  }
+
   function confirmImportProjectExcel() {
     if (!excelImportData) return;
     const projectId = document.getElementById('prj-edit-id').value;
@@ -5966,27 +6106,37 @@
     if (!p) return;
 
     const { clients, suppliers } = excelImportData;
-
     if (!Array.isArray(p.projectClients)) p.projectClients = [];
     if (!Array.isArray(p.projectSuppliers)) p.projectSuppliers = [];
 
-    // Add without overwriting existing entries
+    let addedClients = 0, addedSuppliers = 0, skippedDup = 0;
     clients.forEach(c => {
-      if (!p.projectClients.find(x => x.name === c.name)) p.projectClients.push(c);
+      if (!p.projectClients.find(x => x.name === c.name)) {
+        p.projectClients.push(c); addedClients++;
+      } else skippedDup++;
     });
     suppliers.forEach(s => {
-      if (!p.projectSuppliers.find(x => x.name === s.name)) p.projectSuppliers.push(s);
+      if (!p.projectSuppliers.find(x => x.name === s.name)) {
+        p.projectSuppliers.push(s); addedSuppliers++;
+      } else skippedDup++;
     });
 
     logActivity('project', 'update',
-      `استيراد Excel لمشروع "${p.name}": ${clients.length} عميل، ${suppliers.length} مورد`);
+      `استيراد Excel لمشروع "${p.name}": ${addedClients} عميل، ${addedSuppliers} مورد${skippedDup > 0 ? ` (${skippedDup} مكرر تم تخطيه)` : ''}`);
 
     persist();
     renderProjectClients(p);
     renderProjectSuppliers(p);
     excelImportData = null;
+    excelRawRows = null;
+    excelColumns = [];
     closeModal('excel-import');
-    alert(`✅ تم الاستيراد بنجاح: ${clients.length} عميل و${suppliers.length} مورد.`);
+
+    let msg = `✅ تم الاستيراد بنجاح!
+${addedClients} عميل و${addedSuppliers} مورد تمت إضافتهم.`;
+    if (skippedDup > 0) msg += `
+${skippedDup} سجل مكرر تم تخطيه.`;
+    alert(msg);
   }
 
   async function exportProjectClientPDF() {
