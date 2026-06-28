@@ -1459,29 +1459,27 @@
     const password = document.getElementById('login-password').value;
     const errEl = document.getElementById('login-error');
     const loadEl = document.getElementById('login-loading');
-    errEl.classList.remove('show');
-    if (!email || !password) { errEl.textContent = 'يرجى إدخال البريد الإلكتروني وكلمة المرور.'; errEl.classList.add('show'); return; }
+    const btn = document.getElementById('login-submit-btn');
 
-    const lockStatus = await checkAccountLockout(email);
-    if (lockStatus.blocked) {
-      errEl.textContent = lockStatus.message;
+    errEl.classList.remove('show');
+    if (!email || !password) {
+      errEl.textContent = 'يرجى إدخال البريد الإلكتروني وكلمة المرور.';
       errEl.classList.add('show');
-      const btn = document.getElementById('login-submit-btn');
-      if (lockStatus.remaining) {
-        btn.disabled = true;
-        clearTimeout(loginLockoutTimer);
-        loginLockoutTimer = setTimeout(() => { btn.disabled = false; errEl.classList.remove('show'); }, lockStatus.remaining * 1000);
-      }
       return;
     }
 
+    btn.disabled = true;
     loadEl.classList.add('show');
+
     try {
       sessionStorage.setItem('artash_just_authenticated', '1');
       await auth.signInWithEmailAndPassword(email, password);
       localStorage.setItem('artash_remembered_email', email);
+      // Check lockout after successful login (non-blocking)
+      checkAndHandleLockout(email);
     } catch(e) {
       loadEl.classList.remove('show');
+      btn.disabled = false;
       sessionStorage.removeItem('artash_just_authenticated');
       const msgs = {
         'auth/user-not-found': 'البريد الإلكتروني غير موجود.',
@@ -1489,14 +1487,25 @@
         'auth/invalid-email': 'البريد الإلكتروني غير صالح.',
         'auth/too-many-requests': 'تم تجاوز عدد المحاولات، حاول لاحقاً.',
         'auth/invalid-credential': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
-        'auth/network-request-failed': 'لا يوجد اتصال بالإنترنت. يلزم اتصال مرة واحدة فقط لتسجيل الدخول لأول مرة على هذا الجهاز؛ بعد ذلك سيعمل التطبيق دون إنترنت.',
+        'auth/network-request-failed': 'لا يوجد اتصال بالإنترنت.',
       };
       errEl.textContent = msgs[e.code] || 'حدث خطأ، حاول مرة أخرى.';
       errEl.classList.add('show');
-      if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found') {
-        await registerFailedLoginForEmail(email);
-      }
+      registerFailedLoginForEmail(email).catch(() => {});
     }
+  }
+
+  // Lockout check runs AFTER login — never blocks the login button
+  async function checkAndHandleLockout(email) {
+    try {
+      const doc = await LOGIN_LOCKOUTS_COL.doc(email).get();
+      if (!doc.exists) return;
+      const d = doc.data();
+      if (d.permanentlyLocked && currentUserRole !== 'it') {
+        // Locked account that somehow logged in — sign them out
+        auth.signOut();
+      }
+    } catch(e) { /* ignore */ }
   }
 
   function doLogout() {
