@@ -1242,6 +1242,10 @@
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('reauth-gate-screen').classList.add('hidden');
     localStorage.setItem('artash_last_reauth', Date.now().toString());
+    // If IT role — silently clear any lockout doc that might exist
+    if (currentUserRole === 'it' && user.email) {
+      LOGIN_LOCKOUTS_COL.doc(user.email).delete().catch(() => {});
+    }
     applyRolePermissions();
     if (currentUserRole !== 'it') loadMaintenanceMode();
     setupSync();
@@ -1344,18 +1348,13 @@
   let loginLockoutTimer = null;
 
   async function checkAccountLockout(email) {
+    // IT immunity is now checked AFTER login succeeds (in completeLoginFlow)
+    // Here we only check the lockout doc — no users query that might hang
     try {
-      // Check IT role safely — if this fails (e.g. rules not set), skip and continue
-      try {
-        const usersSnap = await db.collection('users').where('email', '==', email).limit(1).get();
-        if (!usersSnap.empty) {
-          const role = (usersSnap.docs[0].data().role || '').trim().toLowerCase();
-          if (role === 'it') return { blocked: false };
-        }
-      } catch(roleErr) {
-        // Can't check role — fail open (never block login due to a rules issue)
-      }
-      const doc = await LOGIN_LOCKOUTS_COL.doc(email).get();
+      const doc = await Promise.race([
+        LOGIN_LOCKOUTS_COL.doc(email).get(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
+      ]);
       if (!doc.exists) return { blocked: false };
       const d = doc.data();
       if (d.permanentlyLocked) {
@@ -1367,20 +1366,13 @@
       }
       return { blocked: false };
     } catch(e) {
-      return { blocked: false }; // fail open always
+      return { blocked: false }; // fail open always — never block login due to network/timeout
     }
   }
 
   async function registerFailedLoginForEmail(email) {
     try {
-      // IT accounts are never locked out — skip recording failures for them
-      try {
-        const usersSnap = await db.collection('users').where('email', '==', email).limit(1).get();
-        if (!usersSnap.empty) {
-          const role = (usersSnap.docs[0].data().role || '').trim().toLowerCase();
-          if (role === 'it') return;
-        }
-      } catch(roleErr) { /* fail open — don't block lockout tracking */ }
+      // IT immunity handled separately — just track the failure
       const ref = LOGIN_LOCKOUTS_COL.doc(email);
       const doc = await ref.get();
       const d = doc.exists ? doc.data() : {};
