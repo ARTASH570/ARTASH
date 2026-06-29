@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Artash</title>
-  <meta name="app-version" content="31" />
+  <meta name="app-version" content="32" />
   <meta name="description" content="نظام تتبع مالي وفواتير لشركات المقاولات" />
   <meta name="theme-color" content="#1a1a2e" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -21,258 +21,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #0f0f1a;
-      --bg2: #1a1a2e;
-      --bg3: #16213e;
-      --surface: #1e1e35;
-      --surface2: #252540;
-      --border: rgba(255,255,255,0.08);
-      --border2: rgba(255,255,255,0.15);
-      --text: #f0f0ff;
-      --text2: #9999bb;
-      --text3: #6666aa;
-      --accent: #e8b84b;
-      --accent2: #c9973a;
-      --green: #2ecc8a;
-      --green-bg: rgba(46,204,138,0.12);
-      --red: #e85555;
-      --red-bg: rgba(232,85,85,0.12);
-      --amber: #e8b84b;
-      --amber-bg: rgba(232,184,75,0.12);
-      --blue: #5b8dee;
-      --blue-bg: rgba(91,141,238,0.12);
-      --radius: 12px;
-      --radius-sm: 8px;
-    }
-
-    body.light-mode {
-      --bg: #f4f5fb;
-      --bg2: #ffffff;
-      --bg3: #eef0fa;
-      --surface: #ffffff;
-      --surface2: #f1f2f9;
-      --border: rgba(20,20,40,0.08);
-      --border2: rgba(20,20,40,0.15);
-      --text: #1a1a2e;
-      --text2: #5a5a7a;
-      --text3: #8888aa;
-      --accent: #b8842f;
-      --accent2: #96671f;
-      --green: #1f9d6c;
-      --green-bg: rgba(31,157,108,0.1);
-      --red: #d23f3f;
-      --red-bg: rgba(210,63,63,0.1);
-      --amber: #b8842f;
-      --amber-bg: rgba(184,132,47,0.1);
-      --blue: #3a6fd8;
-      --blue-bg: rgba(58,111,216,0.1);
-    }
-
-    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Cairo', -apple-system, sans-serif; font-size: 15px; line-height: 1.6; }
-
-    #app { display: flex; flex-direction: column; height: 100%; max-width: 900px; margin: 0 auto; }
-
-    header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 1.25rem; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 50; }
-    .logo { font-size: 18px; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 8px; }
-    .logo svg { width: 22px; height: 22px; }
-    .sync-badge { font-size: 12px; color: var(--green); background: var(--green-bg); padding: 3px 10px; border-radius: 20px; display: flex; align-items: center; gap: 4px; }
-    .sync-badge.saving { color: var(--amber); background: var(--amber-bg); }
-    .sync-badge.offline { color: var(--red); background: var(--red-bg); }
-
-    nav { background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; padding: 0 1rem; overflow-x: auto; gap: 4px; scrollbar-width: none; }
-    nav::-webkit-scrollbar { display: none; }
-    nav button { padding: 12px 14px; border: none; background: transparent; color: var(--text2); cursor: pointer; font-size: 13px; font-weight: 600; white-space: nowrap; border-bottom: 2px solid transparent; transition: all 0.15s; display: flex; align-items: center; gap: 6px; font-family: 'Cairo', sans-serif; }
-    nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
-    nav button svg { width: 16px; height: 16px; }
-
-    main { flex: 1; overflow-y: auto; padding: 1.25rem; }
-
-    .section { display: none; }
-    .section.visible { display: block; }
-
-    .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 1.25rem; }
-    @media (min-width: 600px) { .metrics { grid-template-columns: repeat(4, 1fr); } }
-    .prj-two-col { display: grid; grid-template-columns: 1fr; gap: 16px; }
-    @media (min-width: 700px) { .prj-two-col { grid-template-columns: 1fr 1fr; } }
-    .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
-    .metric-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; font-weight: 600; }
-    .metric-value { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
-    .metric-sub { font-size: 11px; color: var(--text3); }
-
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
-    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .card-title { font-size: 15px; font-weight: 700; }
-
-    .btn { padding: 9px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--surface2); color: var(--text); cursor: pointer; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; font-family: 'Cairo', sans-serif; }
-    .btn:hover { background: var(--bg3); border-color: var(--accent); color: var(--accent); }
-    .btn-accent { background: var(--accent); border-color: var(--accent); color: #1a1a2e; font-weight: 700; }
-    .btn-accent:hover { background: var(--accent2); border-color: var(--accent2); color: #1a1a2e; }
-    .btn-sm { padding: 5px 10px; font-size: 12px; }
-    .btn-danger { border-color: rgba(232,85,85,0.3); color: var(--red); background: transparent; }
-    .btn-danger:hover { background: var(--red-bg); border-color: var(--red); }
-    .btn-success { border-color: rgba(46,204,138,0.3); color: var(--green); background: transparent; }
-    .btn-success:hover { background: var(--green-bg); border-color: var(--green); }
-
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text3); font-weight: 600; font-size: 12px; white-space: nowrap; font-family: 'Cairo', sans-serif; }
-    td { padding: 11px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; text-align: right; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(255,255,255,0.02); }
-
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-    .badge-paid { background: var(--green-bg); color: var(--green); }
-    .badge-pending { background: var(--amber-bg); color: var(--amber); }
-    .badge-overdue { background: var(--red-bg); color: var(--red); }
-    .badge-partial { background: var(--blue-bg); color: var(--blue); }
-    .badge-active { background: var(--blue-bg); color: var(--blue); }
-    .badge-completed { background: var(--green-bg); color: var(--green); }
-    .badge-hold { background: rgba(150,150,150,0.15); color: #999; }
-
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); }
-    .modal-overlay.open { display: flex; }
-    @media (min-width: 600px) { .modal-overlay { align-items: center; } }
-    .modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius) var(--radius) 0 0; padding: 1.5rem; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
-    @media (min-width: 600px) { .modal { border-radius: var(--radius); } }
-    .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 1.25rem; color: var(--accent); }
-    .modal-actions { display: flex; gap: 8px; justify-content: flex-start; margin-top: 1.25rem; }
-
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-group.full { grid-column: 1 / -1; }
-    label { font-size: 12px; color: var(--text2); font-weight: 600; }
-    input, select, textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 14px; background: var(--surface); color: var(--text); outline: none; transition: border 0.15s; font-family: 'Cairo', sans-serif; text-align: right; direction: rtl; }
-    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-    textarea { resize: vertical; min-height: 70px; }
-    select option { background: var(--bg2); }
-
-    .activity-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
-    .activity-item:last-child { border-bottom: none; }
-    .activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .activity-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
-
-    .progress-bg { background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; margin-top: 8px; }
-    .progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
-
-    .project-item { border-bottom: 1px solid var(--border); padding: 14px 0; }
-    .project-item:last-child { border-bottom: none; }
-    .project-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 10px 0 8px; }
-    .pstat-label { font-size: 11px; color: var(--text3); }
-    .pstat-val { font-size: 13px; font-weight: 700; margin-top: 2px; }
-
-    .empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text3); font-size: 14px; }
-    .empty-state svg { width: 40px; height: 40px; margin: 0 auto 12px; display: block; opacity: 0.4; }
-    .error-msg { background: var(--red-bg); border: 1px solid rgba(232,85,85,0.3); color: var(--red); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; margin-bottom: 12px; }
-
-    #install-banner { display: none; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 1rem; align-items: center; justify-content: space-between; gap: 12px; }
-    #install-banner.show { display: flex; }
-    .install-text { font-size: 13px; color: var(--text2); }
-    .install-text strong { color: var(--text); display: block; margin-bottom: 2px; }
-
-    ::-webkit-scrollbar { width: 4px; height: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
-
-    /* ===== Responsive: Mobile vs Desktop ===== */
-    /* Mobile: compact nav, full-width cards, bigger tap targets */
-    @media (max-width: 599px) {
-      header { padding: 0 0.75rem; height: 52px; gap: 8px; }
-      header > div[style*="max-width:280px"] { display: none; }
-      .logo { font-size: 16px; }
-      nav button { padding: 10px 10px; font-size: 12px; gap: 4px; }
-      nav button svg { display: none; }
-      main { padding: 0.75rem; }
-      .card { padding: 1rem; margin-bottom: 0.75rem; }
-      .metrics { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 0.75rem; }
-      .metric { padding: 0.75rem; }
-      .metric-value { font-size: 15px; }
-      .metric-label { font-size: 10px; }
-      .btn { padding: 8px 12px; font-size: 12px; }
-      .btn-sm { padding: 6px 10px; font-size: 11px; }
-      .modal { padding: 1.25rem; }
-      .form-grid { grid-template-columns: 1fr; gap: 10px; }
-      .form-grid .form-group.full { grid-column: 1; }
-      th, td { padding: 8px 6px; font-size: 12px; }
-      .card-header { flex-direction: column; align-items: flex-start; gap: 8px; }
-      .card-header > div { width: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
-      .toolbar-row { gap: 6px; }
-      .search-wrap { min-width: 100%; }
-      #app { max-width: 100%; }
-      .user-bar .user-name { display: none; }
-      .prj-two-col { grid-template-columns: 1fr !important; }
-      .project-stats { grid-template-columns: repeat(2,1fr); gap: 6px; }
-      .modal-actions { flex-wrap: wrap; }
-      .modal-actions .btn { flex: 1; min-width: 100px; justify-content: center; }
-    }
-
-    /* Tablet: 600-899px */
-    @media (min-width: 600px) and (max-width: 899px) {
-      header > div[style*="max-width:280px"] { max-width: 180px; }
-      .metrics { grid-template-columns: repeat(3, 1fr); }
-      nav button { padding: 11px 12px; font-size: 12px; }
-    }
-
-    /* Desktop: better use of wide space */
-    @media (min-width: 900px) {
-      #app { max-width: 960px; }
-      .metrics { grid-template-columns: repeat(5, 1fr); }
-      .card-header { flex-wrap: nowrap; }
-      nav button { padding: 12px 16px; font-size: 13px; }
-    }
-
-    /* Touch targets: bigger on mobile */
-    @media (hover: none) and (pointer: coarse) {
-      .btn { min-height: 40px; }
-      .btn-sm { min-height: 34px; }
-      nav button { min-height: 44px; }
-      input, select, textarea { min-height: 42px; font-size: 16px; } /* prevent iOS zoom */
-    }
-
-    /* Login Screen */
-    #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 1.5rem; }
-    #reauth-gate-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 1.5rem; }
-    #login-screen.hidden { display: none; }
-    #reauth-gate-screen.hidden { display: none; }
-    .login-box { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 380px; }
-    .login-logo { text-align: center; margin-bottom: 1.5rem; }
-    .login-logo div:first-child { font-size: 28px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
-    .login-logo div:last-child { font-size: 13px; color: var(--text3); }
-    .login-form { display: flex; flex-direction: column; gap: 14px; }
-    .login-error { background: var(--red-bg); border: 1px solid rgba(232,85,85,0.3); color: var(--red); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; display: none; }
-    .login-error.show { display: block; }
-    .btn-login { width: 100%; padding: 12px; font-size: 15px; font-weight: 700; background: var(--accent); border: none; border-radius: var(--radius-sm); color: #1a1a2e; cursor: pointer; font-family: 'Cairo', sans-serif; margin-top: 4px; }
-    .btn-login:hover { background: var(--accent2); }
-    .login-loading { text-align: center; color: var(--text3); font-size: 13px; display: none; }
-    .login-loading.show { display: block; }
-
-    /* User bar */
-    .user-bar { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
-    .user-name { color: var(--accent); font-weight: 600; }
-    .btn-logout { padding: 4px 10px; font-size: 11px; border: 1px solid var(--border2); border-radius: 20px; background: transparent; color: var(--text2); cursor: pointer; font-family: 'Cairo', sans-serif; }
-    .btn-logout:hover { border-color: var(--red); color: var(--red); }
-
-    /* Search bar */
-    .search-wrap { position: relative; flex: 1; min-width: 160px; }
-    .search-wrap svg { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text3); pointer-events: none; }
-    .search-input { padding-right: 38px; }
-    .toolbar-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
-    .btn-pdf { background: var(--blue-bg); border-color: rgba(91,141,238,0.3); color: var(--blue); }
-    .btn-pdf:hover { background: var(--blue); border-color: var(--blue); color: #fff; }
   
-/* ===== Toast Notifications (بديل الـ alert) ===== */
-#toast-container { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
-.toast { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px 20px; font-size: 13px; font-family: "Cairo", sans-serif; color: var(--text); box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px; max-width: 320px; text-align: center; animation: toastIn 0.25s ease; pointer-events: auto; }
-.toast.success { border-color: rgba(46,204,138,0.4); background: var(--green-bg); color: var(--green); }
-.toast.error { border-color: rgba(232,85,85,0.4); background: var(--red-bg); color: var(--red); }
-.toast.warning { border-color: rgba(232,184,75,0.4); background: var(--amber-bg); color: var(--amber); }
-.toast.info { border-color: rgba(91,141,238,0.4); background: var(--blue-bg); color: var(--blue); }
-@keyframes toastIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-@keyframes toastOut { from { opacity:1; } to { opacity:0; transform:translateY(10px); } }
-</style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -367,14 +116,6 @@
     <button id="nav-projects" onclick="showTab('projects', this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
       المشاريع
-    </button>
-    <button id="nav-clients" onclick="showTab('clients', this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-      العملاء
-    </button>
-    <button id="nav-suppliers" onclick="showTab('suppliers', this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-      الموردين
     </button>
 
 
@@ -606,38 +347,6 @@
     </div>
 
 
-
-    <!-- العملاء -->
-    <div id="tab-clients" class="section">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">دليل العملاء</span>
-        </div>
-        <div class="toolbar-row">
-          <div class="search-wrap">
-            <input type="text" class="search-input" id="global-client-search" placeholder="بحث بالاسم أو المشروع…" oninput="renderGlobalClients()" />
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </div>
-        </div>
-        <div id="global-clients-list"></div>
-      </div>
-    </div>
-
-    <!-- الموردين -->
-    <div id="tab-suppliers" class="section">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">دليل الموردين</span>
-        </div>
-        <div class="toolbar-row">
-          <div class="search-wrap">
-            <input type="text" class="search-input" id="global-supplier-search" placeholder="بحث بالاسم أو المشروع…" oninput="renderGlobalSuppliers()" />
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </div>
-        </div>
-        <div id="global-suppliers-list"></div>
-      </div>
-    </div>
 
     <!-- الشركاء (المدير وIT فقط) -->
     <div id="tab-partners" class="section">
@@ -1196,68 +905,6 @@
   </div>
 </div>
 
-<!-- نافذة تفاصيل العميل الشامل -->
-<div class="modal-overlay" id="modal-global-client">
-  <div class="modal" style="max-width:620px;">
-    <div class="modal-title" id="global-client-modal-title">تفاصيل العميل</div>
-    <div id="global-client-content"></div>
-    <div class="modal-actions">
-      <button class="btn btn-pdf" id="global-client-pdf-btn" onclick="exportGlobalClientPDF()">تقرير PDF</button>
-      <button class="btn btn-pdf" onclick="exportGlobalClientExcel()">تقرير Excel</button>
-      <button class="btn" onclick="closeModal('global-client')">إغلاق</button>
-    </div>
-  </div>
-</div>
-
-<!-- نافذة تفاصيل المورد الشامل -->
-<div class="modal-overlay" id="modal-global-supplier">
-  <div class="modal" style="max-width:620px;">
-    <div class="modal-title" id="global-supplier-modal-title">تفاصيل المورد</div>
-    <div id="global-supplier-content"></div>
-    <div class="modal-actions">
-      <button class="btn btn-pdf" id="global-supplier-pdf-btn" onclick="exportGlobalSupplierPDF()">تقرير PDF</button>
-      <button class="btn btn-pdf" onclick="exportGlobalSupplierExcel()">تقرير Excel</button>
-      <button class="btn" onclick="closeModal('global-supplier')">إغلاق</button>
-    </div>
-  </div>
-</div>
-
-<!-- نافذة فاتورة العميل/المورد -->
-<div class="modal-overlay" id="modal-entity-invoice">
-  <div class="modal" style="max-width:480px;">
-    <div class="modal-title" id="entity-invoice-modal-title">فاتورة جديدة</div>
-    <input type="hidden" id="entity-invoice-edit-id" />
-    <input type="hidden" id="entity-invoice-type" /> <!-- client/supplier -->
-    <div id="entity-invoice-err"></div>
-    <div class="form-grid">
-      <div class="form-group full"><label>الوصف *</label><input id="entity-invoice-desc" placeholder="مثال: أعمال بناء الدور الأول" /></div>
-      <div class="form-group"><label>المبلغ (جنيه) *</label><input id="entity-invoice-amount" type="number" placeholder="0" oninput="updateEntityInvoiceRemaining()" /></div>
-      <div class="form-group"><label>التاريخ *</label><input id="entity-invoice-date" type="date" /></div>
-      <div class="form-group full"><label>ملاحظات</label><input id="entity-invoice-notes" placeholder="اختياري" /></div>
-    </div>
-
-    <!-- دفعات الفاتورة -->
-    <div id="entity-invoice-payments-section" style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="font-size:13px;font-weight:700;" id="entity-invoice-payments-label">الدفعات</span>
-        <span id="entity-invoice-remaining-label" style="font-size:13px;font-weight:700;"></span>
-      </div>
-      <div id="entity-invoice-payments-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-        <input id="entity-pay-amount" type="number" placeholder="المبلغ" style="flex:1;min-width:90px" />
-        <input id="entity-pay-date" type="date" style="flex:1;min-width:120px" />
-        <button class="btn btn-sm btn-accent" onclick="addEntityInvoicePayment()">+ دفعة</button>
-      </div>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn btn-accent" onclick="saveEntityInvoice()">حفظ</button>
-      <button class="btn btn-danger" id="entity-invoice-delete-btn" onclick="deleteEntityInvoice()" style="display:none">حذف</button>
-      <button class="btn" onclick="closeModal('entity-invoice')">إغلاق</button>
-    </div>
-  </div>
-</div>
-
 <!-- نافذة تأكيد حذف المشروع بكلمة المرور -->
 <div class="modal-overlay" id="modal-delete-project">
   <div class="modal" style="max-width:420px;">
@@ -1282,27 +929,28 @@
     <input type="hidden" id="prj-client-edit-id" value="" />
     <div id="prj-client-err"></div>
     <div class="form-grid">
-      <div class="form-group full"><label>الاسم *</label><input id="prj-client-name" placeholder="اسم العميل أو الشركة" list="global-clients-datalist" /><datalist id="global-clients-datalist"></datalist></div>
+      <div class="form-group full"><label>الاسم *</label><input id="prj-client-name" placeholder="اسم العميل أو الشركة" /></div>
+      <div class="form-group full"><label>إجمالي المبلغ (جنيه)</label><input id="prj-client-total" type="number" placeholder="0" oninput="updatePrjClientRemaining()" /></div>
       <div class="form-group full"><label>ملاحظات</label><textarea id="prj-client-notes" placeholder="ملاحظات اختيارية…"></textarea></div>
     </div>
 
-    <!-- ملخص مالي -->
-    <div id="prj-client-summary" style="display:none;background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;margin-top:10px;display:none;">
-    </div>
-
-    <!-- قايمة الفواتير -->
-    <div id="prj-client-invoices-section" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <span style="font-size:13px;font-weight:700;">الفواتير</span>
-        <button class="btn btn-sm btn-accent" onclick="addClientInvoice()">+ فاتورة جديدة</button>
+    <!-- قسم الدفعات -->
+    <div id="prj-client-payments-section" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:700;">الدفعات المحصّلة</span>
+        <span id="prj-client-remaining-label" style="font-size:13px;font-weight:700;color:var(--red)"></span>
       </div>
-      <div id="prj-client-invoices-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div id="prj-client-payments-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <input id="prj-client-pay-amount" type="number" placeholder="المبلغ" style="flex:1;min-width:90px" />
+        <input id="prj-client-pay-date" type="date" style="flex:1;min-width:120px" />
+        <button class="btn btn-sm btn-accent" onclick="addProjectClientPayment()">+ إضافة دفعة</button>
+      </div>
     </div>
 
     <div class="modal-actions">
       <button class="btn btn-accent" id="prj-client-save-btn" onclick="saveProjectClient()">حفظ</button>
       <button class="btn btn-pdf" id="prj-client-pdf-btn" onclick="exportProjectClientPDF()" style="display:none">تقرير PDF</button>
-      <button class="btn btn-pdf" id="prj-client-excel-btn" onclick="exportProjectClientExcel()" style="display:none">Excel</button>
       <button class="btn btn-danger" id="prj-client-delete-btn" onclick="deleteProjectClient()" style="display:none">حذف</button>
       <button class="btn" onclick="closeModal('project-client')">إغلاق</button>
     </div>
@@ -1316,7 +964,7 @@
     <input type="hidden" id="prj-supplier-edit-id" value="" />
     <div id="prj-supplier-err"></div>
     <div class="form-grid">
-      <div class="form-group full"><label>الاسم *</label><input id="prj-supplier-name" placeholder="اسم المورد أو الشركة" list="global-suppliers-datalist" /><datalist id="global-suppliers-datalist"></datalist></div>
+      <div class="form-group full"><label>الاسم *</label><input id="prj-supplier-name" placeholder="اسم المورد أو الشركة" /></div>
       <div class="form-group full"><label>النوع</label>
         <select id="prj-supplier-category">
           <option value="مواد">مواد</option>
@@ -1326,22 +974,27 @@
           <option value="أخرى">أخرى</option>
         </select>
       </div>
+      <div class="form-group full"><label>إجمالي المبلغ (جنيه)</label><input id="prj-supplier-total" type="number" placeholder="0" oninput="updatePrjSupplierRemaining()" /></div>
       <div class="form-group full"><label>ملاحظات</label><textarea id="prj-supplier-notes" placeholder="ملاحظات اختيارية…"></textarea></div>
     </div>
 
-    <!-- قايمة الفواتير/المشتريات -->
-    <div id="prj-supplier-invoices-section" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <span style="font-size:13px;font-weight:700;">المشتريات والمدفوعات</span>
-        <button class="btn btn-sm btn-accent" onclick="addSupplierInvoice()">+ إضافة مشتريات</button>
+    <!-- قسم الدفعات -->
+    <div id="prj-supplier-payments-section" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:700;">الدفعات المدفوعة له</span>
+        <span id="prj-supplier-remaining-label" style="font-size:13px;font-weight:700;color:var(--amber)"></span>
       </div>
-      <div id="prj-supplier-invoices-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div id="prj-supplier-payments-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <input id="prj-supplier-pay-amount" type="number" placeholder="المبلغ" style="flex:1;min-width:90px" />
+        <input id="prj-supplier-pay-date" type="date" style="flex:1;min-width:120px" />
+        <button class="btn btn-sm btn-accent" onclick="addProjectSupplierPayment()">+ إضافة دفعة</button>
+      </div>
     </div>
 
     <div class="modal-actions">
       <button class="btn btn-accent" id="prj-supplier-save-btn" onclick="saveProjectSupplier()">حفظ</button>
       <button class="btn btn-pdf" id="prj-supplier-pdf-btn" onclick="exportProjectSupplierPDF()" style="display:none">تقرير PDF</button>
-      <button class="btn btn-pdf" id="prj-supplier-excel-btn" onclick="exportProjectSupplierExcel()" style="display:none">Excel</button>
       <button class="btn btn-danger" id="prj-supplier-delete-btn" onclick="deleteProjectSupplier()" style="display:none">حذف</button>
       <button class="btn" onclick="closeModal('project-supplier')">إغلاق</button>
     </div>
@@ -1493,10 +1146,6 @@
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('reauth-gate-screen').classList.add('hidden');
     localStorage.setItem('artash_last_reauth', Date.now().toString());
-    // If IT role — silently clear any lockout doc that might exist
-    if (currentUserRole === 'it' && user.email) {
-      LOGIN_LOCKOUTS_COL.doc(user.email).delete().catch(() => {});
-    }
     applyRolePermissions();
     if (currentUserRole !== 'it') loadMaintenanceMode();
     setupSync();
@@ -1545,8 +1194,6 @@
 
     // Nav tabs
     document.getElementById('nav-dashboard').style.display = isEngineer ? 'none' : '';
-    document.getElementById('nav-clients').style.display = isEngineer ? 'none' : '';
-    document.getElementById('nav-suppliers').style.display = isEngineer ? 'none' : '';
     document.getElementById('nav-partners').style.display = isAdmin ? '' : 'none';
     document.getElementById('nav-reports').style.display = isEngineer ? 'none' : '';
     document.getElementById('nav-quotes').style.display = isEngineer ? 'none' : '';
@@ -1599,13 +1246,18 @@
   let loginLockoutTimer = null;
 
   async function checkAccountLockout(email) {
-    // IT immunity is now checked AFTER login succeeds (in completeLoginFlow)
-    // Here we only check the lockout doc — no users query that might hang
     try {
-      const doc = await Promise.race([
-        LOGIN_LOCKOUTS_COL.doc(email).get(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
-      ]);
+      // Check IT role safely — if this fails (e.g. rules not set), skip and continue
+      try {
+        const usersSnap = await db.collection('users').where('email', '==', email).limit(1).get();
+        if (!usersSnap.empty) {
+          const role = (usersSnap.docs[0].data().role || '').trim().toLowerCase();
+          if (role === 'it') return { blocked: false };
+        }
+      } catch(roleErr) {
+        // Can't check role — fail open (never block login due to a rules issue)
+      }
+      const doc = await LOGIN_LOCKOUTS_COL.doc(email).get();
       if (!doc.exists) return { blocked: false };
       const d = doc.data();
       if (d.permanentlyLocked) {
@@ -1617,13 +1269,20 @@
       }
       return { blocked: false };
     } catch(e) {
-      return { blocked: false }; // fail open always — never block login due to network/timeout
+      return { blocked: false }; // fail open always
     }
   }
 
   async function registerFailedLoginForEmail(email) {
     try {
-      // IT immunity handled separately — just track the failure
+      // IT accounts are never locked out — skip recording failures for them
+      try {
+        const usersSnap = await db.collection('users').where('email', '==', email).limit(1).get();
+        if (!usersSnap.empty) {
+          const role = (usersSnap.docs[0].data().role || '').trim().toLowerCase();
+          if (role === 'it') return;
+        }
+      } catch(roleErr) { /* fail open — don't block lockout tracking */ }
       const ref = LOGIN_LOCKOUTS_COL.doc(email);
       const doc = await ref.get();
       const d = doc.exists ? doc.data() : {};
@@ -1710,27 +1369,18 @@
     const password = document.getElementById('login-password').value;
     const errEl = document.getElementById('login-error');
     const loadEl = document.getElementById('login-loading');
-    const btn = document.getElementById('login-submit-btn');
-
     errEl.classList.remove('show');
-    if (!email || !password) {
-      errEl.textContent = 'يرجى إدخال البريد الإلكتروني وكلمة المرور.';
-      errEl.classList.add('show');
-      return;
-    }
+    if (!email || !password) { errEl.textContent = 'يرجى إدخال البريد الإلكتروني وكلمة المرور.'; errEl.classList.add('show'); return; }
 
-    btn.disabled = true;
     loadEl.classList.add('show');
-
+    document.getElementById('login-submit-btn').disabled = true;
     try {
       sessionStorage.setItem('artash_just_authenticated', '1');
       await auth.signInWithEmailAndPassword(email, password);
       localStorage.setItem('artash_remembered_email', email);
-      // Check lockout after successful login (non-blocking)
-      checkAndHandleLockout(email);
     } catch(e) {
       loadEl.classList.remove('show');
-      btn.disabled = false;
+      document.getElementById('login-submit-btn').disabled = false;
       sessionStorage.removeItem('artash_just_authenticated');
       const msgs = {
         'auth/user-not-found': 'البريد الإلكتروني غير موجود.',
@@ -1738,25 +1388,14 @@
         'auth/invalid-email': 'البريد الإلكتروني غير صالح.',
         'auth/too-many-requests': 'تم تجاوز عدد المحاولات، حاول لاحقاً.',
         'auth/invalid-credential': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
-        'auth/network-request-failed': 'لا يوجد اتصال بالإنترنت.',
+        'auth/network-request-failed': 'لا يوجد اتصال بالإنترنت. يلزم اتصال مرة واحدة فقط لتسجيل الدخول لأول مرة على هذا الجهاز؛ بعد ذلك سيعمل التطبيق دون إنترنت.',
       };
       errEl.textContent = msgs[e.code] || 'حدث خطأ، حاول مرة أخرى.';
       errEl.classList.add('show');
-      registerFailedLoginForEmail(email).catch(() => {});
-    }
-  }
-
-  // Lockout check runs AFTER login — never blocks the login button
-  async function checkAndHandleLockout(email) {
-    try {
-      const doc = await LOGIN_LOCKOUTS_COL.doc(email).get();
-      if (!doc.exists) return;
-      const d = doc.data();
-      if (d.permanentlyLocked && currentUserRole !== 'it') {
-        // Locked account that somehow logged in — sign them out
-        auth.signOut();
+      if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found') {
+        await registerFailedLoginForEmail(email);
       }
-    } catch(e) { /* ignore */ }
+    }
   }
 
   function doLogout() {
@@ -2254,8 +1893,6 @@
     btn.classList.add('active');
     if (tab === 'settings') { loadEmployeesList(); loadActivityLog(true); renderTrash(); updateNotificationSettingsUI(); loadLockedAccounts(); if (currentUserRole === 'it') runSecurityChecklist(); }
     if (tab === 'reports' && !document.getElementById('report-from-date').value) setReportRangeThisMonth();
-    if (tab === 'clients') renderGlobalClients();
-    if (tab === 'suppliers') renderGlobalSuppliers();
   }
 
   function clearInvoiceFilters() {
@@ -2603,8 +2240,8 @@
     const projectClients = p.projectClients || [];
     const projectSuppliers = p.projectSuppliers || [];
     if (projectClients.length || projectSuppliers.length) {
-      const totalClientRemaining = projectClients.reduce((s, c) => s + calcEntityTotals(c).remaining, 0);
-      const totalSupplierRemaining = projectSuppliers.reduce((s, s2) => s + calcEntityTotals(s2).remaining, 0);
+      const totalClientRemaining = projectClients.reduce((s, c) => s + (Number(c.remaining) || Math.max(0, Number(c.total||0) - Number(c.paid||0))), 0);
+      const totalSupplierRemaining = projectSuppliers.reduce((s, s2) => s + (Number(s2.remaining) || Math.max(0, Number(s2.total||0) - Number(s2.paid||0))), 0);
       let extra = '<div style="height:1px;background:var(--border);margin:8px 0;"></div>';
       if (projectClients.length) extra += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>متبقي من العملاء (${projectClients.length})</span><strong style="color:var(--green)">${fmt(totalClientRemaining)}</strong></div>`;
       if (projectSuppliers.length) extra += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>متبقي للموردين (${projectSuppliers.length})</span><strong style="color:var(--amber)">${fmt(totalSupplierRemaining)}</strong></div>`;
@@ -3504,7 +3141,7 @@
     }).join('');
   }
 
-  function renderAll() { renderDashboard(); renderInvoices(); renderExpenses(); renderProjects(); renderQuotes(); renderPartners(); renderGlobalClients(); renderGlobalSuppliers(); updateGlobalDatalistsForProjects(); }
+  function renderAll() { renderDashboard(); renderInvoices(); renderExpenses(); renderProjects(); renderQuotes(); renderPartners(); }
 
   // ===== Clients directory =====
 
@@ -5844,387 +5481,230 @@
 
   // ===== عملاء وموردو المشروع (خاصون بكل مشروع) =====
 
-  // ===== نظام فواتير العملاء والموردين =====
-  // كل عميل/مورد عنده قايمة فواتير (invoices) بدل مبلغ واحد
-  // كل فاتورة عندها وصف + مبلغ + تاريخ + دفعات
-
-  let currentEntityContext = null; // { type: 'client'|'supplier', projectId, entityId }
-
-  function getEntityInvoicePaidTotal(inv) {
-    return (inv.payments || []).reduce((s, p) => s + Number(p.amount), 0);
-  }
-
-  function getEntityInvoiceRemaining(inv) {
-    return Math.max(0, Number(inv.amount) - getEntityInvoicePaidTotal(inv));
-  }
-
-  function getEntityInvoiceStatus(inv) {
-    const remaining = getEntityInvoiceRemaining(inv);
-    if (remaining <= 0.01) return { key: 'paid', label: 'مدفوعة', color: 'var(--green)' };
-    if (getEntityInvoicePaidTotal(inv) > 0) return { key: 'partial', label: 'جزئي', color: 'var(--blue)' };
-    return { key: 'pending', label: 'معلقة', color: 'var(--amber)' };
-  }
-
-  // حساب الإجمالي والمدفوع والمتبقي من الفواتير
-  function calcEntityTotals(entity) {
-    const invoices = entity.invoices || [];
-    const total = invoices.reduce((s, inv) => s + Number(inv.amount), 0);
-    const paid = invoices.reduce((s, inv) => s + getEntityInvoicePaidTotal(inv), 0);
-    const remaining = Math.max(0, total - paid);
-    return { total, paid, remaining };
-  }
-
-  function renderClientInvoicesList(c) {
-    const section = document.getElementById('prj-client-invoices-section');
-    const listEl = document.getElementById('prj-client-invoices-list');
-    if (!section || !listEl) return;
-
-    section.style.display = '';
-    const invoices = c.invoices || [];
-    const totals = calcEntityTotals(c);
-
-    // Update summary
-    const summaryEl = document.getElementById('prj-client-summary');
-    if (summaryEl) {
-      summaryEl.style.display = '';
-      summaryEl.innerHTML = `
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:13px;"><span>إجمالي الفواتير</span><strong>${fmt(totals.total)}</strong></div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:13px;"><span>المحصّل</span><strong style="color:var(--green)">${fmt(totals.paid)}</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;"><span>المتبقي</span><strong style="color:${totals.remaining>0?'var(--red)':'var(--green)'}">${totals.remaining>0?fmt(totals.remaining):'✓ مسدد بالكامل'}</strong></div>
-      `;
-    }
-
-    if (!invoices.length) {
-      listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);">لا توجد فواتير بعد. اضغط "+ فاتورة جديدة".</div>';
-      return;
-    }
-
-    listEl.innerHTML = invoices.slice().reverse().map(inv => {
-      const st = getEntityInvoiceStatus(inv);
-      const paid = getEntityInvoicePaidTotal(inv);
-      const remaining = getEntityInvoiceRemaining(inv);
-      return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;cursor:pointer;" onclick="openEntityInvoiceModal('client', '${inv.id}')">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;">
-          <div>
-            <div style="font-size:13px;font-weight:700;">${inv.desc}</div>
-            <div style="font-size:11px;color:var(--text3);">${fmtDate(inv.date)}${inv.notes ? ' · ' + inv.notes : ''}</div>
-          </div>
-          <div style="text-align:left;flex-shrink:0;">
-            <div style="font-size:13px;font-weight:700;">${fmt(inv.amount)}</div>
-            <span class="badge badge-${st.key}" style="font-size:10px;">${st.label}</span>
-          </div>
-        </div>
-        ${paid > 0 && remaining > 0 ? `
-          <div style="margin-top:6px;">
-            <div class="progress-bg"><div class="progress-fill" style="width:${Math.round(paid/Number(inv.amount)*100)}%;background:var(--green);"></div></div>
-            <div style="font-size:11px;color:var(--text3);margin-top:3px;">محصّل ${fmt(paid)} · متبقي ${fmt(remaining)}</div>
-          </div>` : ''}
-      </div>`;
-    }).join('');
-  }
-
-  function renderSupplierInvoicesList(s) {
-    const section = document.getElementById('prj-supplier-invoices-section');
-    const listEl = document.getElementById('prj-supplier-invoices-list');
-    if (!section || !listEl) return;
-
-    section.style.display = '';
-    const invoices = s.invoices || [];
-    const totals = calcEntityTotals(s);
-
-    if (!invoices.length) {
-      listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);">لا توجد مشتريات بعد. اضغط "+ إضافة مشتريات".</div>';
-      return;
-    }
-
-    listEl.innerHTML = invoices.slice().reverse().map(inv => {
-      const st = getEntityInvoiceStatus(inv);
-      const paid = getEntityInvoicePaidTotal(inv);
-      const remaining = getEntityInvoiceRemaining(inv);
-      return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;cursor:pointer;" onclick="openEntityInvoiceModal('supplier', '${inv.id}')">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;">
-          <div>
-            <div style="font-size:13px;font-weight:700;">${inv.desc}</div>
-            <div style="font-size:11px;color:var(--text3);">${fmtDate(inv.date)}${inv.notes ? ' · ' + inv.notes : ''}</div>
-          </div>
-          <div style="text-align:left;flex-shrink:0;">
-            <div style="font-size:13px;font-weight:700;">${fmt(inv.amount)}</div>
-            <span class="badge badge-${st.key}" style="font-size:10px;">${st.label}</span>
-          </div>
-        </div>
-        ${paid > 0 && remaining > 0 ? `
-          <div style="margin-top:6px;">
-            <div class="progress-bg"><div class="progress-fill" style="width:${Math.round(paid/Number(inv.amount)*100)}%;background:var(--red);"></div></div>
-            <div style="font-size:11px;color:var(--text3);margin-top:3px;">مدفوع ${fmt(paid)} · متبقي ${fmt(remaining)}</div>
-          </div>` : ''}
-      </div>`;
-    }).join('');
-  }
-
-  function addClientInvoice() {
+  function updatePrjClientRemaining() {
+    const total = Number(document.getElementById('prj-client-total').value) || 0;
     const editId = document.getElementById('prj-client-edit-id').value;
-    if (!editId) { showToast('يرجى حفظ العميل أولاً.', 'warning'); return; }
-    openEntityInvoiceModal('client', null);
-  }
-
-  function addSupplierInvoice() {
-    const editId = document.getElementById('prj-supplier-edit-id').value;
-    if (!editId) { showToast('يرجى حفظ المورد أولاً.', 'warning'); return; }
-    openEntityInvoiceModal('supplier', null);
-  }
-
-  function openEntityInvoiceModal(type, invoiceId) {
     const projectId = document.getElementById('prj-edit-id').value;
-    const entityEditId = type === 'client'
-      ? document.getElementById('prj-client-edit-id').value
-      : document.getElementById('prj-supplier-edit-id').value;
     const p = state.projects.find(x => x.id === projectId);
-    const entities = type === 'client' ? (p?.projectClients||[]) : (p?.projectSuppliers||[]);
-    const entity = entities.find(x => x.id === entityEditId);
-    if (!entity) return;
-
-    currentEntityContext = { type, projectId, entityId: entityEditId };
-
-    document.getElementById('entity-invoice-type').value = type;
-    document.getElementById('entity-invoice-err').innerHTML = '';
-    document.getElementById('entity-invoice-modal-title').textContent =
-      invoiceId ? (type === 'client' ? 'تفاصيل الفاتورة' : 'تفاصيل المشتريات') :
-      (type === 'client' ? 'فاتورة جديدة' : 'إضافة مشتريات');
-    document.getElementById('entity-invoice-payments-label').textContent =
-      type === 'client' ? 'الدفعات المحصّلة' : 'الدفعات المدفوعة للمورد';
-
-    if (invoiceId) {
-      const inv = (entity.invoices||[]).find(x => x.id === invoiceId);
-      if (!inv) return;
-      document.getElementById('entity-invoice-edit-id').value = inv.id;
-      document.getElementById('entity-invoice-desc').value = inv.desc || '';
-      document.getElementById('entity-invoice-amount').value = inv.amount || '';
-      document.getElementById('entity-invoice-date').value = inv.date || '';
-      document.getElementById('entity-invoice-notes').value = inv.notes || '';
-      document.getElementById('entity-invoice-delete-btn').style.display = '';
-      renderEntityInvoicePayments(inv, type);
-    } else {
-      document.getElementById('entity-invoice-edit-id').value = '';
-      document.getElementById('entity-invoice-desc').value = '';
-      document.getElementById('entity-invoice-amount').value = '';
-      document.getElementById('entity-invoice-date').value = today();
-      document.getElementById('entity-invoice-notes').value = '';
-      document.getElementById('entity-invoice-delete-btn').style.display = 'none';
-      document.getElementById('entity-invoice-payments-list').innerHTML = '';
-      document.getElementById('entity-invoice-remaining-label').textContent = '';
-      document.getElementById('entity-pay-date').value = today();
-      document.getElementById('entity-pay-amount').value = '';
-    }
-    document.getElementById('modal-entity-invoice').classList.add('open');
+    const c = editId ? (p?.projectClients || []).find(x => x.id === editId) : null;
+    const paid = c ? (c.payments || []).reduce((s, p) => s + Number(p.amount), 0) : 0;
+    const remaining = Math.max(0, total - paid);
+    const label = document.getElementById('prj-client-remaining-label');
+    if (label) label.textContent = remaining > 0 ? `المتبقي: ${fmt(remaining)}` : '✓ مسدد بالكامل';
   }
 
-  function renderEntityInvoicePayments(inv, type) {
-    const listEl = document.getElementById('entity-invoice-payments-list');
-    const remainLabel = document.getElementById('entity-invoice-remaining-label');
-    const payments = inv.payments || [];
-    const paidTotal = getEntityInvoicePaidTotal(inv);
-    const remaining = getEntityInvoiceRemaining(inv);
-    const color = type === 'client' ? 'var(--green)' : 'var(--red)';
+  function updatePrjSupplierRemaining() {
+    const total = Number(document.getElementById('prj-supplier-total').value) || 0;
+    const editId = document.getElementById('prj-supplier-edit-id').value;
+    const projectId = document.getElementById('prj-edit-id').value;
+    const p = state.projects.find(x => x.id === projectId);
+    const s = editId ? (p?.projectSuppliers || []).find(x => x.id === editId) : null;
+    const paid = s ? (s.payments || []).reduce((sum, pm) => sum + Number(pm.amount), 0) : 0;
+    const remaining = Math.max(0, total - paid);
+    const label = document.getElementById('prj-supplier-remaining-label');
+    if (label) label.textContent = remaining > 0 ? `المتبقي له: ${fmt(remaining)}` : '✓ تمت التسوية';
+  }
 
-    remainLabel.innerHTML = remaining > 0
-      ? `<span style="color:${type==='client'?'var(--red)':'var(--amber)'}">المتبقي: ${fmt(remaining)}</span>`
-      : `<span style="color:var(--green)">✓ ${type==='client'?'مسدد بالكامل':'تمت التسوية'}</span>`;
-
+  function renderProjectClientPayments(c) {
+    const section = document.getElementById('prj-client-payments-section');
+    const listEl = document.getElementById('prj-client-payments-list');
+    if (!section || !listEl) return;
+    const total = Number(document.getElementById('prj-client-total').value) || 0;
+    section.style.display = total > 0 ? '' : 'none';
+    if (total <= 0) return;
+    const payments = c?.payments || [];
+    const paidTotal = payments.reduce((s, p) => s + Number(p.amount), 0);
+    const remaining = Math.max(0, total - paidTotal);
+    const label = document.getElementById('prj-client-remaining-label');
+    if (label) label.textContent = remaining > 0 ? `المتبقي: ${fmt(remaining)}` : '✓ مسدد بالكامل';
     if (!payments.length) {
-      listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);">لا توجد دفعات.</div>';
+      listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);">لا توجد دفعات بعد.</div>';
     } else {
       listEl.innerHTML = payments.slice().reverse().map(pm => `
-        <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
           <div>
-            <div style="font-size:12px;font-weight:700;color:${color}">${fmt(pm.amount)}</div>
-            <div style="font-size:11px;color:var(--text3)">${fmtDate(pm.date)} — ${pm.by||''}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--green)">${fmt(pm.amount)}</div>
+            <div style="font-size:11px;color:var(--text3)">${fmtDate(pm.date)} — ${pm.by || 'غير معروف'}</div>
           </div>
-          <button class="btn btn-sm btn-danger" onclick="deleteEntityPayment('${pm.id}')">حذف</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteProjectClientPayment('${pm.id}')">حذف</button>
         </div>`).join('');
     }
-    document.getElementById('entity-pay-date').value = today();
-    document.getElementById('entity-pay-amount').value = '';
+    document.getElementById('prj-client-pay-date').value = today();
   }
 
-  function updateEntityInvoiceRemaining() {
-    const amount = Number(document.getElementById('entity-invoice-amount').value) || 0;
-    const invId = document.getElementById('entity-invoice-edit-id').value;
-    if (!invId || !currentEntityContext) return;
-    const p = state.projects.find(x => x.id === currentEntityContext.projectId);
-    const entities = currentEntityContext.type === 'client' ? (p?.projectClients||[]) : (p?.projectSuppliers||[]);
-    const entity = entities.find(x => x.id === currentEntityContext.entityId);
-    const inv = (entity?.invoices||[]).find(x => x.id === invId);
-    if (inv) {
-      inv.amount = amount;
-      const remaining = getEntityInvoiceRemaining(inv);
-      document.getElementById('entity-invoice-remaining-label').innerHTML =
-        remaining > 0 ? `متبقي: ${fmt(remaining)}` : '✓ مسدد';
-    }
-  }
-
-  function saveEntityInvoice() {
-    if (!currentEntityContext) return;
-    const desc = document.getElementById('entity-invoice-desc').value.trim();
-    const amount = Number(document.getElementById('entity-invoice-amount').value);
-    const date = document.getElementById('entity-invoice-date').value;
-    const notes = document.getElementById('entity-invoice-notes').value.trim();
-    const errEl = document.getElementById('entity-invoice-err');
-
-    if (!desc) { errEl.innerHTML = '<div class="error-msg">يرجى إدخال وصف.</div>'; return; }
-    if (!amount || amount <= 0) { errEl.innerHTML = '<div class="error-msg">يرجى إدخال مبلغ صحيح.</div>'; return; }
-    if (!date) { errEl.innerHTML = '<div class="error-msg">يرجى إدخال التاريخ.</div>'; return; }
-
-    const p = state.projects.find(x => x.id === currentEntityContext.projectId);
-    const entities = currentEntityContext.type === 'client' ? (p?.projectClients||[]) : (p?.projectSuppliers||[]);
-    const entity = entities.find(x => x.id === currentEntityContext.entityId);
-    if (!entity) return;
-    if (!Array.isArray(entity.invoices)) entity.invoices = [];
-
-    const invId = document.getElementById('entity-invoice-edit-id').value;
-    if (invId) {
-      const inv = entity.invoices.find(x => x.id === invId);
-      if (inv) { inv.desc = desc; inv.amount = amount; inv.date = date; inv.notes = notes; }
+  function renderProjectSupplierPayments(s) {
+    const section = document.getElementById('prj-supplier-payments-section');
+    const listEl = document.getElementById('prj-supplier-payments-list');
+    if (!section || !listEl) return;
+    const total = Number(document.getElementById('prj-supplier-total').value) || 0;
+    section.style.display = total > 0 ? '' : 'none';
+    if (total <= 0) return;
+    const payments = s?.payments || [];
+    const paidTotal = payments.reduce((sum, pm) => sum + Number(pm.amount), 0);
+    const remaining = Math.max(0, total - paidTotal);
+    const label = document.getElementById('prj-supplier-remaining-label');
+    if (label) label.textContent = remaining > 0 ? `المتبقي له: ${fmt(remaining)}` : '✓ تمت التسوية';
+    if (!payments.length) {
+      listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);">لا توجد دفعات بعد.</div>';
     } else {
-      entity.invoices.push({ id: uid(), desc, amount, date, notes, payments: [], createdBy: currentUserName, createdAt: new Date().toISOString() });
+      listEl.innerHTML = payments.slice().reverse().map(pm => `
+        <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--red)">${fmt(pm.amount)}</div>
+            <div style="font-size:11px;color:var(--text3)">${fmtDate(pm.date)} — ${pm.by || 'غير معروف'}</div>
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="deleteProjectSupplierPayment('${pm.id}')">حذف</button>
+        </div>`).join('');
     }
-
-    // Recalculate totals
-    const totals = calcEntityTotals(entity);
-    entity.total = totals.total;
-    entity.paid = totals.paid;
-    entity.remaining = totals.remaining;
-
-    logActivity(currentEntityContext.type === 'client' ? 'client' : 'supplier', 'update',
-      `${invId ? 'تعديل' : 'إضافة'} ${currentEntityContext.type==='client'?'فاتورة':'مشتريات'} "${desc}" — ${fmt(amount)}`);
-    persist();
-
-    if (currentEntityContext.type === 'client') {
-      renderClientInvoicesList(entity);
-      renderProjectClients(p);
-    } else {
-      renderSupplierInvoicesList(entity);
-      renderProjectSuppliers(p);
-    }
-    closeModal('entity-invoice');
-    showToast('تم الحفظ.', 'success');
+    document.getElementById('prj-supplier-pay-date').value = today();
   }
 
-  function addEntityInvoicePayment() {
-    if (!currentEntityContext) return;
-    const invId = document.getElementById('entity-invoice-edit-id').value;
-    if (!invId) { showToast('يرجى حفظ الفاتورة أولاً.', 'warning'); return; }
-
-    const amount = Number(document.getElementById('entity-pay-amount').value);
-    const date = document.getElementById('entity-pay-date').value || today();
-    const p = state.projects.find(x => x.id === currentEntityContext.projectId);
-    const entities = currentEntityContext.type === 'client' ? (p?.projectClients||[]) : (p?.projectSuppliers||[]);
-    const entity = entities.find(x => x.id === currentEntityContext.entityId);
-    const inv = (entity?.invoices||[]).find(x => x.id === invId);
-    if (!inv) return;
-
-    const remaining = getEntityInvoiceRemaining(inv);
+  function addProjectClientPayment() {
+    const projectId = document.getElementById('prj-edit-id').value;
+    const editId = document.getElementById('prj-client-edit-id').value;
+    if (!editId) { showToast('يرجى حفظ العميل أولاً ثم إضافة دفعة.', 'warning'); return; }
+    const p = state.projects.find(x => x.id === projectId);
+    const c = (p?.projectClients || []).find(x => x.id === editId);
+    if (!c) return;
+    const amount = Number(document.getElementById('prj-client-pay-amount').value);
+    const date = document.getElementById('prj-client-pay-date').value || today();
+    const total = Number(document.getElementById('prj-client-total').value) || 0;
+    const paidSoFar = (c.payments || []).reduce((s, pm) => s + Number(pm.amount), 0);
     if (!amount || amount <= 0) { showToast('يرجى إدخال مبلغ صحيح.', 'warning'); return; }
-    if (amount > remaining + 0.01) { showToast(`المبلغ أكبر من المتبقي (${fmt(remaining)}).`, 'warning'); return; }
-
-    if (!Array.isArray(inv.payments)) inv.payments = [];
-    inv.payments.push({ id: uid(), amount, date, by: currentUserName, at: new Date().toISOString() });
-
-    // Recalculate entity totals
-    const totals = calcEntityTotals(entity);
-    entity.total = totals.total;
-    entity.paid = totals.paid;
-    entity.remaining = totals.remaining;
-
-    persist();
-    renderEntityInvoicePayments(inv, currentEntityContext.type);
-    if (currentEntityContext.type === 'client') renderProjectClients(p);
-    else renderProjectSuppliers(p);
-    document.getElementById('entity-pay-amount').value = '';
+    if (amount > (total - paidSoFar) + 0.01) { alert(`المبلغ أكبر من المتبقي (${fmt(total - paidSoFar)})`); return; }
+    if (!Array.isArray(c.payments)) c.payments = [];
+    c.payments.push({ id: uid(), amount, date, by: currentUserName, at: new Date().toISOString() });
+    c.paid = (c.payments).reduce((s, pm) => s + Number(pm.amount), 0);
+    c.remaining = Math.max(0, total - c.paid);
+    logActivity('client', 'update', `دفعة ${fmt(amount)} من عميل "${c.name}" في مشروع "${p.name}"`);
+    persistProject(p);
+    renderProjectClientPayments(c);
+    renderProjectClients(p);
+    document.getElementById('prj-client-pay-amount').value = '';
   }
 
-  function deleteEntityPayment(paymentId) {
-    if (!currentEntityContext) return;
-    const invId = document.getElementById('entity-invoice-edit-id').value;
-    const p = state.projects.find(x => x.id === currentEntityContext.projectId);
-    const entities = currentEntityContext.type === 'client' ? (p?.projectClients||[]) : (p?.projectSuppliers||[]);
-    const entity = entities.find(x => x.id === currentEntityContext.entityId);
-    const inv = (entity?.invoices||[]).find(x => x.id === invId);
-    if (!inv || !confirm('حذف هذه الدفعة؟')) return;
-    inv.payments = (inv.payments||[]).filter(x => x.id !== paymentId);
-    const totals = calcEntityTotals(entity);
-    entity.total = totals.total; entity.paid = totals.paid; entity.remaining = totals.remaining;
-    persist();
-    renderEntityInvoicePayments(inv, currentEntityContext.type);
-    if (currentEntityContext.type === 'client') renderProjectClients(p);
-    else renderProjectSuppliers(p);
-  }
-
-  function deleteEntityInvoice() {
-    if (!currentEntityContext) return;
-    const invId = document.getElementById('entity-invoice-edit-id').value;
-    if (!invId || !confirm('حذف هذه الفاتورة وكل دفعاتها؟')) return;
-    const p = state.projects.find(x => x.id === currentEntityContext.projectId);
-    const entities = currentEntityContext.type === 'client' ? (p?.projectClients||[]) : (p?.projectSuppliers||[]);
-    const entity = entities.find(x => x.id === currentEntityContext.entityId);
-    if (!entity) return;
-    entity.invoices = (entity.invoices||[]).filter(x => x.id !== invId);
-    const totals = calcEntityTotals(entity);
-    entity.total = totals.total; entity.paid = totals.paid; entity.remaining = totals.remaining;
-    persist();
-    if (currentEntityContext.type === 'client') { renderClientInvoicesList(entity); renderProjectClients(p); }
-    else { renderSupplierInvoicesList(entity); renderProjectSuppliers(p); }
-    closeModal('entity-invoice');
-  }
-
-  function exportProjectClientExcel() {
+  function deleteProjectClientPayment(paymentId) {
     const projectId = document.getElementById('prj-edit-id').value;
     const editId = document.getElementById('prj-client-edit-id').value;
     const p = state.projects.find(x => x.id === projectId);
-    const c = (p?.projectClients||[]).find(x => x.id === editId);
-    if (!c) return;
-    const wb = XLSX.utils.book_new();
-    const rows = [];
-    (c.invoices||[]).forEach(inv => {
-      const paidTotal = getEntityInvoicePaidTotal(inv);
-      const remaining = getEntityInvoiceRemaining(inv);
-      if (!(inv.payments||[]).length) {
-        rows.push({ 'الوصف': inv.desc, 'التاريخ': inv.date, 'المبلغ': inv.amount, 'المحصّل': 0, 'المتبقي': inv.amount, 'تاريخ الدفعة': '', 'مبلغ الدفعة': '' });
-      } else {
-        (inv.payments||[]).forEach(pm => {
-          rows.push({ 'الوصف': inv.desc, 'التاريخ': inv.date, 'المبلغ': inv.amount, 'المحصّل': paidTotal, 'المتبقي': remaining, 'تاريخ الدفعة': pm.date, 'مبلغ الدفعة': pm.amount });
-        });
-      }
-    });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{'لا توجد فواتير':''}]), 'فواتير العميل');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(exportInfoSheet()), 'معلومات');
-    XLSX.writeFile(wb, `client-${c.name}-${p.name}.xlsx`);
+    const c = (p?.projectClients || []).find(x => x.id === editId);
+    if (!c || !confirm('حذف هذه الدفعة؟')) return;
+    c.payments = (c.payments || []).filter(pm => pm.id !== paymentId);
+    const total = Number(document.getElementById('prj-client-total').value) || 0;
+    c.paid = (c.payments).reduce((s, pm) => s + Number(pm.amount), 0);
+    c.remaining = Math.max(0, total - c.paid);
+    persistProject(p);
+    renderProjectClientPayments(c);
+    renderProjectClients(p);
   }
 
-  function exportProjectSupplierExcel() {
+  function addProjectSupplierPayment() {
+    const projectId = document.getElementById('prj-edit-id').value;
+    const editId = document.getElementById('prj-supplier-edit-id').value;
+    if (!editId) { showToast('يرجى حفظ المورد أولاً ثم إضافة دفعة.', 'warning'); return; }
+    const p = state.projects.find(x => x.id === projectId);
+    const s = (p?.projectSuppliers || []).find(x => x.id === editId);
+    if (!s) return;
+    const amount = Number(document.getElementById('prj-supplier-pay-amount').value);
+    const date = document.getElementById('prj-supplier-pay-date').value || today();
+    const total = Number(document.getElementById('prj-supplier-total').value) || 0;
+    const paidSoFar = (s.payments || []).reduce((sum, pm) => sum + Number(pm.amount), 0);
+    if (!amount || amount <= 0) { showToast('يرجى إدخال مبلغ صحيح.', 'warning'); return; }
+    if (amount > (total - paidSoFar) + 0.01) { alert(`المبلغ أكبر من المتبقي (${fmt(total - paidSoFar)})`); return; }
+    if (!Array.isArray(s.payments)) s.payments = [];
+    s.payments.push({ id: uid(), amount, date, by: currentUserName, at: new Date().toISOString() });
+    s.paid = (s.payments).reduce((sum, pm) => sum + Number(pm.amount), 0);
+    s.remaining = Math.max(0, total - s.paid);
+    logActivity('supplier', 'update', `دفعة ${fmt(amount)} للمورد "${s.name}" في مشروع "${p.name}"`);
+    persistProject(p);
+    renderProjectSupplierPayments(s);
+    renderProjectSuppliers(p);
+    document.getElementById('prj-supplier-pay-amount').value = '';
+  }
+
+  function deleteProjectSupplierPayment(paymentId) {
     const projectId = document.getElementById('prj-edit-id').value;
     const editId = document.getElementById('prj-supplier-edit-id').value;
     const p = state.projects.find(x => x.id === projectId);
-    const s = (p?.projectSuppliers||[]).find(x => x.id === editId);
-    if (!s) return;
-    const wb = XLSX.utils.book_new();
-    const rows = [];
-    (s.invoices||[]).forEach(inv => {
-      const paidTotal = getEntityInvoicePaidTotal(inv);
-      const remaining = getEntityInvoiceRemaining(inv);
-      if (!(inv.payments||[]).length) {
-        rows.push({ 'الوصف': inv.desc, 'التاريخ': inv.date, 'المبلغ': inv.amount, 'المدفوع': 0, 'المتبقي له': inv.amount, 'تاريخ الدفعة': '', 'مبلغ الدفعة': '' });
-      } else {
-        (inv.payments||[]).forEach(pm => {
-          rows.push({ 'الوصف': inv.desc, 'التاريخ': inv.date, 'المبلغ': inv.amount, 'المدفوع': paidTotal, 'المتبقي له': remaining, 'تاريخ الدفعة': pm.date, 'مبلغ الدفعة': pm.amount });
-        });
-      }
-    });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{'لا توجد مشتريات':''}]), 'مشتريات المورد');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(exportInfoSheet()), 'معلومات');
-    XLSX.writeFile(wb, `supplier-${s.name}-${p.name}.xlsx`);
+    const s = (p?.projectSuppliers || []).find(x => x.id === editId);
+    if (!s || !confirm('حذف هذه الدفعة؟')) return;
+    s.payments = (s.payments || []).filter(pm => pm.id !== paymentId);
+    const total = Number(document.getElementById('prj-supplier-total').value) || 0;
+    s.paid = (s.payments).reduce((sum, pm) => sum + Number(pm.amount), 0);
+    s.remaining = Math.max(0, total - s.paid);
+    persistProject(p);
+    renderProjectSupplierPayments(s);
+    renderProjectSuppliers(p);
   }
 
-  function openProjectClientModal(clientId) {  function openProjectClientModal(clientId) {
+  function renderProjectClients(p) {
+    const list = document.getElementById('prj-clients-list');
+    if (!list) return;
+    const clients = p.projectClients || [];
+    const canEdit = currentUserRole !== 'accountant';
+    document.getElementById('prj-add-client-btn').style.display = canEdit ? '' : 'none';
+
+    if (!clients.length) {
+      list.innerHTML = '<div style="font-size:12px;color:var(--text3);">لا يوجد عملاء مضافون لهذا المشروع بعد.</div>';
+      return;
+    }
+    list.innerHTML = clients.map(c => {
+      const remaining = Number(c.remaining) || (Number(c.total||0) - Number(c.paid||0));
+      const remainingColor = remaining > 0 ? 'var(--red)' : 'var(--green)';
+      return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:13px;font-weight:700;">${c.name}</div>
+          ${c.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">${c.notes}</div>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="text-align:left;">
+            ${c.total > 0 ? `<div style="font-size:12px;color:var(--text2);">إجمالي: <strong>${fmt(c.total)}</strong></div>` : ''}
+            ${c.paid > 0 ? `<div style="font-size:12px;color:var(--green);">محصّل: <strong>${fmt(c.paid)}</strong></div>` : ''}
+            ${remaining > 0 ? `<div style="font-size:12px;color:${remainingColor};">متبقي: <strong>${fmt(remaining)}</strong></div>` : '<div style="font-size:11px;color:var(--green);">✓ مسدد بالكامل</div>'}
+          </div>
+          ${canEdit ? `<div style="display:flex;gap:6px;">
+            <button class="btn btn-sm" onclick="openProjectClientModal('${c.id}')">تعديل</button>
+          </div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderProjectSuppliers(p) {
+    const list = document.getElementById('prj-suppliers-list');
+    if (!list) return;
+    const suppliers = p.projectSuppliers || [];
+    const canEdit = currentUserRole !== 'accountant';
+    document.getElementById('prj-add-supplier-btn').style.display = canEdit ? '' : 'none';
+
+    if (!suppliers.length) {
+      list.innerHTML = '<div style="font-size:12px;color:var(--text3);">لا يوجد موردون مضافون لهذا المشروع بعد.</div>';
+      return;
+    }
+    list.innerHTML = suppliers.map(s => {
+      const remaining = Number(s.remaining) || (Number(s.total||0) - Number(s.paid||0));
+      const remainingColor = remaining > 0 ? 'var(--amber)' : 'var(--green)';
+      return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:13px;font-weight:700;">${s.name}</div>
+          <div style="font-size:11px;color:var(--text3);">${s.category || ''}</div>
+          ${s.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">${s.notes}</div>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="text-align:left;">
+            ${s.total > 0 ? `<div style="font-size:12px;color:var(--text2);">إجمالي: <strong>${fmt(s.total)}</strong></div>` : ''}
+            ${s.paid > 0 ? `<div style="font-size:12px;color:var(--red);">مدفوع: <strong>${fmt(s.paid)}</strong></div>` : ''}
+            ${remaining > 0 ? `<div style="font-size:12px;color:${remainingColor};">متبقي له: <strong>${fmt(remaining)}</strong></div>` : '<div style="font-size:11px;color:var(--green);">✓ تمت التسوية</div>'}
+          </div>
+          ${canEdit ? `<div style="display:flex;gap:6px;">
+            <button class="btn btn-sm" onclick="openProjectSupplierModal('${s.id}')">تعديل</button>
+          </div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function openProjectClientModal(clientId) {
     const projectId = document.getElementById('prj-edit-id').value;
     if (!projectId) { showToast('يرجى حفظ المشروع أولاً.', 'warning'); return; }
     document.getElementById('modal-project-client').classList.add('open');
@@ -6252,16 +5732,6 @@
       document.getElementById('prj-client-pdf-btn').style.display = 'none';
       document.getElementById('prj-client-payments-section').style.display = 'none';
     }
-  }
-
-  function updateGlobalDatalistsForProjects() {
-    // Populate datalists for autocomplete in project modals
-    const allClients = getAllClientsFromProjects();
-    const allSuppliers = getAllSuppliersFromProjects();
-    const cdl = document.getElementById('global-clients-datalist');
-    const sdl = document.getElementById('global-suppliers-datalist');
-    if (cdl) cdl.innerHTML = allClients.map(c => `<option value="${c.name}">`).join('');
-    if (sdl) sdl.innerHTML = allSuppliers.map(s => `<option value="${s.name}">`).join('');
   }
 
   function saveProjectClient() {
@@ -6395,354 +5865,6 @@
     persistProject(p);
     renderProjectSuppliers(p);
     closeModal('project-supplier');
-  }
-
-  // ===== دليل العملاء والموردين الشامل =====
-  // يجمع كل العملاء من كل المشاريع في قايمة واحدة
-  // ويربط كل عميل بالمشاريع بتاعته
-
-  let currentGlobalClient = null;
-  let currentGlobalSupplier = null;
-
-  // جمع كل العملاء من كل المشاريع
-  function getAllClientsFromProjects() {
-    const clientsMap = {}; // key: name → { name, projects: [{project, client entry}] }
-    state.projects.forEach(p => {
-      (p.projectClients || []).forEach(c => {
-        const key = c.name.trim().toLowerCase();
-        if (!clientsMap[key]) clientsMap[key] = { name: c.name, projects: [] };
-        clientsMap[key].projects.push({ project: p, entry: c });
-      });
-    });
-    return Object.values(clientsMap);
-  }
-
-  // جمع كل الموردين من كل المشاريع
-  function getAllSuppliersFromProjects() {
-    const suppliersMap = {};
-    state.projects.forEach(p => {
-      (p.projectSuppliers || []).forEach(s => {
-        const key = s.name.trim().toLowerCase();
-        if (!suppliersMap[key]) suppliersMap[key] = { name: s.name, projects: [] };
-        suppliersMap[key].projects.push({ project: p, entry: s });
-      });
-    });
-    return Object.values(suppliersMap);
-  }
-
-  function renderGlobalClients() {
-    const el = document.getElementById('global-clients-list');
-    if (!el) return;
-    const q = (document.getElementById('global-client-search')?.value || '').trim();
-    let list = getAllClientsFromProjects();
-    if (q) list = list.filter(c => smartMatch(c.name + ' ' + c.projects.map(p => p.project.name).join(' '), q));
-
-    if (!list.length) {
-      el.innerHTML = `<div class="empty-state">${q ? 'لا توجد نتائج.' : 'لا يوجد عملاء بعد. أضف عملاء من داخل المشاريع.'}</div>`;
-      return;
-    }
-
-    el.innerHTML = list.map(client => {
-      const totalAmt = client.projects.reduce((s, p) => s + Number(p.entry.total||0), 0);
-      const totalPaid = client.projects.reduce((s, p) => s + (p.entry.payments||[]).reduce((s2,pm) => s2+Number(pm.amount),0), 0);
-      const totalRemaining = Math.max(0, totalAmt - totalPaid);
-
-      return `<div class="project-item" style="cursor:pointer" onclick="openGlobalClientModal('${client.name.replace(/'/g,"\'")}')">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;">
-          <div style="text-align:left">
-            <div style="font-size:12px;color:var(--text3);">${client.projects.length} مشروع</div>
-            ${totalRemaining > 0
-              ? `<div style="font-size:13px;color:var(--red);font-weight:700;">متبقي: ${fmt(totalRemaining)}</div>`
-              : `<div style="font-size:12px;color:var(--green);">✓ مسدد</div>`}
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:15px;font-weight:700;">${client.name}</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;">
-              ${client.projects.map(p => `<span style="background:var(--surface2);padding:2px 8px;border-radius:20px;font-size:11px;">${p.project.name}</span>`).join('')}
-            </div>
-          </div>
-        </div>
-        <div class="project-stats" style="margin-top:10px;">
-          <div style="text-align:right;"><div class="pstat-label">الإجمالي</div><div class="pstat-val">${fmt(totalAmt)}</div></div>
-          <div style="text-align:right;"><div class="pstat-label">المحصّل</div><div class="pstat-val" style="color:var(--green)">${fmt(totalPaid)}</div></div>
-          <div style="text-align:right;"><div class="pstat-label">المتبقي</div><div class="pstat-val" style="color:${totalRemaining>0?'var(--red)':'var(--green)'}">${fmt(totalRemaining)}</div></div>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  function renderGlobalSuppliers() {
-    const el = document.getElementById('global-suppliers-list');
-    if (!el) return;
-    const q = (document.getElementById('global-supplier-search')?.value || '').trim();
-    let list = getAllSuppliersFromProjects();
-    if (q) list = list.filter(s => smartMatch(s.name + ' ' + s.projects.map(p => p.project.name).join(' '), q));
-
-    if (!list.length) {
-      el.innerHTML = `<div class="empty-state">${q ? 'لا توجد نتائج.' : 'لا يوجد موردون بعد. أضف موردين من داخل المشاريع.'}</div>`;
-      return;
-    }
-
-    el.innerHTML = list.map(supplier => {
-      const totalAmt = supplier.projects.reduce((s, p) => s + Number(p.entry.total||0), 0);
-      const totalPaid = supplier.projects.reduce((s, p) => s + (p.entry.payments||[]).reduce((s2,pm) => s2+Number(pm.amount),0), 0);
-      const totalRemaining = Math.max(0, totalAmt - totalPaid);
-
-      return `<div class="project-item" style="cursor:pointer" onclick="openGlobalSupplierModal('${supplier.name.replace(/'/g,"\'")}')">
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;">
-          <div style="text-align:left">
-            <div style="font-size:12px;color:var(--text3);">${supplier.projects.length} مشروع</div>
-            ${totalRemaining > 0
-              ? `<div style="font-size:13px;color:var(--amber);font-weight:700;">متبقي له: ${fmt(totalRemaining)}</div>`
-              : `<div style="font-size:12px;color:var(--green);">✓ مسوّى</div>`}
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:15px;font-weight:700;">${supplier.name}</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;">
-              ${supplier.projects.map(p => `<span style="background:var(--surface2);padding:2px 8px;border-radius:20px;font-size:11px;">${p.project.name}</span>`).join('')}
-            </div>
-          </div>
-        </div>
-        <div class="project-stats" style="margin-top:10px;">
-          <div style="text-align:right;"><div class="pstat-label">الإجمالي</div><div class="pstat-val">${fmt(totalAmt)}</div></div>
-          <div style="text-align:right;"><div class="pstat-label">المدفوع</div><div class="pstat-val" style="color:var(--red)">${fmt(totalPaid)}</div></div>
-          <div style="text-align:right;"><div class="pstat-label">المتبقي له</div><div class="pstat-val" style="color:${totalRemaining>0?'var(--amber)':'var(--green)'}">${fmt(totalRemaining)}</div></div>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  function buildClientDetailHTML(clientData) {
-    let html = '';
-    let grandTotal = 0, grandPaid = 0;
-
-    clientData.projects.forEach(({ project: p, entry: c }) => {
-      const payments = c.payments || [];
-      const paidTotal = payments.reduce((s, pm) => s + Number(pm.amount), 0);
-      const remaining = Math.max(0, Number(c.total||0) - paidTotal);
-      grandTotal += Number(c.total||0);
-      grandPaid += paidTotal;
-
-      html += `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <div style="display:flex;gap:6px;align-items:center;">
-            <span style="font-size:12px;color:var(--text3);">${p.status}</span>
-          </div>
-          <div style="font-size:14px;font-weight:700;cursor:pointer;color:var(--accent);" onclick="closeModal('global-client');openProjectDetail('${p.id}')">${p.name} ←</div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:${payments.length?'10px':'0'};">
-          <div><div class="pstat-label">الإجمالي</div><div class="pstat-val">${fmt(c.total||0)}</div></div>
-          <div><div class="pstat-label">المحصّل</div><div class="pstat-val" style="color:var(--green)">${fmt(paidTotal)}</div></div>
-          <div><div class="pstat-label">المتبقي</div><div class="pstat-val" style="color:${remaining>0?'var(--red)':'var(--green)'}">${remaining>0?fmt(remaining):'✓ مسدد'}</div></div>
-        </div>
-        ${payments.length ? `
-          <div style="border-top:1px solid var(--border);padding-top:8px;">
-            <div style="font-size:12px;color:var(--text3);margin-bottom:6px;">الدفعات (${payments.length})</div>
-            ${payments.map(pm => `
-              <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;">
-                <span style="color:var(--text3)">${fmtDate(pm.date)} — ${pm.by||''}</span>
-                <span style="color:var(--green);font-weight:700">${fmt(pm.amount)}</span>
-              </div>`).join('')}
-          </div>` : ''}
-      </div>`;
-    });
-
-    const grandRemaining = Math.max(0, grandTotal - grandPaid);
-    html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;background:var(--surface2);border-radius:var(--radius-sm);padding:12px;">
-      <div><div class="pstat-label">إجمالي كل المشاريع</div><div class="pstat-val">${fmt(grandTotal)}</div></div>
-      <div><div class="pstat-label">إجمالي المحصّل</div><div class="pstat-val" style="color:var(--green)">${fmt(grandPaid)}</div></div>
-      <div><div class="pstat-label">إجمالي المتبقي</div><div class="pstat-val" style="color:${grandRemaining>0?'var(--red)':'var(--green)'}">${grandRemaining>0?fmt(grandRemaining):'✓ مسدد'}</div></div>
-    </div>` + html;
-
-    return html;
-  }
-
-  function buildSupplierDetailHTML(supplierData) {
-    let html = '';
-    let grandTotal = 0, grandPaid = 0;
-
-    supplierData.projects.forEach(({ project: p, entry: s }) => {
-      const payments = s.payments || [];
-      const paidTotal = payments.reduce((s2, pm) => s2 + Number(pm.amount), 0);
-      const remaining = Math.max(0, Number(s.total||0) - paidTotal);
-      grandTotal += Number(s.total||0);
-      grandPaid += paidTotal;
-
-      html += `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <span style="font-size:12px;color:var(--text3);">${s.category||''} · ${p.status}</span>
-          <div style="font-size:14px;font-weight:700;cursor:pointer;color:var(--accent);" onclick="closeModal('global-supplier');openProjectDetail('${p.id}')">${p.name} ←</div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:${payments.length?'10px':'0'};">
-          <div><div class="pstat-label">الإجمالي</div><div class="pstat-val">${fmt(s.total||0)}</div></div>
-          <div><div class="pstat-label">المدفوع</div><div class="pstat-val" style="color:var(--red)">${fmt(paidTotal)}</div></div>
-          <div><div class="pstat-label">المتبقي له</div><div class="pstat-val" style="color:${remaining>0?'var(--amber)':'var(--green)'}">${remaining>0?fmt(remaining):'✓ مسوّى'}</div></div>
-        </div>
-        ${payments.length ? `
-          <div style="border-top:1px solid var(--border);padding-top:8px;">
-            <div style="font-size:12px;color:var(--text3);margin-bottom:6px;">الدفعات (${payments.length})</div>
-            ${payments.map(pm => `
-              <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;">
-                <span style="color:var(--text3)">${fmtDate(pm.date)} — ${pm.by||''}</span>
-                <span style="color:var(--red);font-weight:700">${fmt(pm.amount)}</span>
-              </div>`).join('')}
-          </div>` : ''}
-      </div>`;
-    });
-
-    const grandRemaining = Math.max(0, grandTotal - grandPaid);
-    html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;background:var(--surface2);border-radius:var(--radius-sm);padding:12px;">
-      <div><div class="pstat-label">إجمالي كل المشاريع</div><div class="pstat-val">${fmt(grandTotal)}</div></div>
-      <div><div class="pstat-label">إجمالي المدفوع</div><div class="pstat-val" style="color:var(--red)">${fmt(grandPaid)}</div></div>
-      <div><div class="pstat-label">إجمالي المتبقي له</div><div class="pstat-val" style="color:${grandRemaining>0?'var(--amber)':'var(--green)'}">${grandRemaining>0?fmt(grandRemaining):'✓ مسوّى'}</div></div>
-    </div>` + html;
-
-    return html;
-  }
-
-  function openGlobalClientModal(name) {
-    const all = getAllClientsFromProjects();
-    const client = all.find(c => c.name === name);
-    if (!client) return;
-    currentGlobalClient = client;
-    document.getElementById('global-client-modal-title').textContent = `العميل: ${name}`;
-    document.getElementById('global-client-content').innerHTML = buildClientDetailHTML(client);
-    document.getElementById('modal-global-client').classList.add('open');
-  }
-
-  function openGlobalSupplierModal(name) {
-    const all = getAllSuppliersFromProjects();
-    const supplier = all.find(s => s.name === name);
-    if (!supplier) return;
-    currentGlobalSupplier = supplier;
-    document.getElementById('global-supplier-modal-title').textContent = `المورد: ${name}`;
-    document.getElementById('global-supplier-content').innerHTML = buildSupplierDetailHTML(supplier);
-    document.getElementById('modal-global-supplier').classList.add('open');
-  }
-
-  // ===== PDF/Excel للعميل الشامل =====
-  async function exportGlobalClientPDF() {
-    const client = currentGlobalClient;
-    if (!client) return;
-    let grandTotal = 0, grandPaid = 0;
-
-    let html = pdfWrapStart('كشف حساب عميل شامل');
-    html += `<div style="font-size:22px;font-weight:700;margin-bottom:4px;">${client.name}</div>`;
-    html += `<div style="font-size:13px;color:#888;margin-bottom:16px;">${client.projects.length} مشروع</div>`;
-    html += `<div style="height:1px;background:#ddd;margin-bottom:16px;"></div>`;
-
-    client.projects.forEach(({ project: p, entry: c }) => {
-      const payments = c.payments || [];
-      const paidTotal = payments.reduce((s, pm) => s + Number(pm.amount), 0);
-      const remaining = Math.max(0, Number(c.total||0) - paidTotal);
-      grandTotal += Number(c.total||0);
-      grandPaid += paidTotal;
-
-      html += `<div style="font-weight:700;color:#555;margin:14px 0 8px;">${p.name}</div>`;
-      html += rowHtml('الإجمالي', fmt(c.total||0));
-      html += rowHtml('المحصّل', `<span style="color:#2ecc8a">${fmt(paidTotal)}</span>`);
-      html += rowHtml('المتبقي', `<span style="color:${remaining>0?'#e85555':'#2ecc8a'}">${remaining>0?fmt(remaining):'✓ مسدد'}</span>`);
-
-      if (payments.length) {
-        html += `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;margin-bottom:4px;">
-          <thead><tr style="background:#f7f7f9;"><th style="padding:5px;text-align:right;">التاريخ</th><th style="padding:5px;text-align:right;">المبلغ</th><th style="padding:5px;text-align:right;">بواسطة</th></tr></thead><tbody>`;
-        payments.forEach(pm => {
-          html += `<tr><td style="padding:5px;border-bottom:1px solid #eee;">${fmtDate(pm.date)}</td><td style="padding:5px;border-bottom:1px solid #eee;color:#2ecc8a;font-weight:700;">${fmt(pm.amount)}</td><td style="padding:5px;border-bottom:1px solid #eee;color:#888;">${pm.by||''}</td></tr>`;
-        });
-        html += `</tbody></table>`;
-      }
-    });
-
-    const grandRemaining = Math.max(0, grandTotal - grandPaid);
-    html += `<div style="height:2px;background:#e8b84b;margin:20px 0;"></div>`;
-    html += rowHtml('إجمالي كل المشاريع', fmt(grandTotal));
-    html += rowHtml('إجمالي المحصّل', `<strong style="color:#2ecc8a">${fmt(grandPaid)}</strong>`);
-    html += rowHtml('إجمالي المتبقي', `<strong style="color:${grandRemaining>0?'#e85555':'#2ecc8a'};font-size:18px;">${grandRemaining>0?fmt(grandRemaining):'✓ مسدد بالكامل'}</strong>`);
-    html += pdfWrapEnd();
-    await renderHtmlToPdf(html, `client-${client.name}-all-projects.pdf`);
-  }
-
-  function exportGlobalClientExcel() {
-    const client = currentGlobalClient;
-    if (!client) return;
-    const wb = XLSX.utils.book_new();
-    const rows = [];
-    client.projects.forEach(({ project: p, entry: c }) => {
-      const payments = c.payments || [];
-      if (!payments.length) {
-        rows.push({ 'المشروع': p.name, 'الإجمالي': Number(c.total||0), 'المحصّل': 0, 'المتبقي': Number(c.total||0), 'تاريخ الدفعة': '', 'مبلغ الدفعة': '', 'بواسطة': '' });
-      } else {
-        payments.forEach(pm => {
-          const paidTotal = payments.reduce((s, x) => s + Number(x.amount), 0);
-          rows.push({ 'المشروع': p.name, 'الإجمالي': Number(c.total||0), 'المحصّل': paidTotal, 'المتبقي': Math.max(0, Number(c.total||0) - paidTotal), 'تاريخ الدفعة': pm.date, 'مبلغ الدفعة': Number(pm.amount), 'بواسطة': pm.by||'' });
-        });
-      }
-    });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'تعاملات العميل');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(exportInfoSheet()), 'معلومات');
-    XLSX.writeFile(wb, `client-${client.name}.xlsx`);
-  }
-
-  async function exportGlobalSupplierPDF() {
-    const supplier = currentGlobalSupplier;
-    if (!supplier) return;
-    let grandTotal = 0, grandPaid = 0;
-
-    let html = pdfWrapStart('كشف حساب مورد شامل');
-    html += `<div style="font-size:22px;font-weight:700;margin-bottom:4px;">${supplier.name}</div>`;
-    html += `<div style="font-size:13px;color:#888;margin-bottom:16px;">${supplier.projects.length} مشروع</div>`;
-    html += `<div style="height:1px;background:#ddd;margin-bottom:16px;"></div>`;
-
-    supplier.projects.forEach(({ project: p, entry: s }) => {
-      const payments = s.payments || [];
-      const paidTotal = payments.reduce((s2, pm) => s2 + Number(pm.amount), 0);
-      const remaining = Math.max(0, Number(s.total||0) - paidTotal);
-      grandTotal += Number(s.total||0);
-      grandPaid += paidTotal;
-
-      html += `<div style="font-weight:700;color:#555;margin:14px 0 8px;">${p.name} ${s.category ? `(${s.category})` : ''}</div>`;
-      html += rowHtml('الإجمالي', fmt(s.total||0));
-      html += rowHtml('المدفوع', `<span style="color:#e85555">${fmt(paidTotal)}</span>`);
-      html += rowHtml('المتبقي له', `<span style="color:${remaining>0?'#e8b84b':'#2ecc8a'}">${remaining>0?fmt(remaining):'✓ مسوّى'}</span>`);
-
-      if (payments.length) {
-        html += `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;margin-bottom:4px;">
-          <thead><tr style="background:#f7f7f9;"><th style="padding:5px;text-align:right;">التاريخ</th><th style="padding:5px;text-align:right;">المبلغ</th><th style="padding:5px;text-align:right;">بواسطة</th></tr></thead><tbody>`;
-        payments.forEach(pm => {
-          html += `<tr><td style="padding:5px;border-bottom:1px solid #eee;">${fmtDate(pm.date)}</td><td style="padding:5px;border-bottom:1px solid #eee;color:#e85555;font-weight:700;">${fmt(pm.amount)}</td><td style="padding:5px;border-bottom:1px solid #eee;color:#888;">${pm.by||''}</td></tr>`;
-        });
-        html += `</tbody></table>`;
-      }
-    });
-
-    const grandRemaining = Math.max(0, grandTotal - grandPaid);
-    html += `<div style="height:2px;background:#e8b84b;margin:20px 0;"></div>`;
-    html += rowHtml('إجمالي كل المشاريع', fmt(grandTotal));
-    html += rowHtml('إجمالي المدفوع', `<strong style="color:#e85555">${fmt(grandPaid)}</strong>`);
-    html += rowHtml('إجمالي المتبقي له', `<strong style="color:${grandRemaining>0?'#e8b84b':'#2ecc8a'};font-size:18px;">${grandRemaining>0?fmt(grandRemaining):'✓ تمت التسوية'}</strong>`);
-    html += pdfWrapEnd();
-    await renderHtmlToPdf(html, `supplier-${supplier.name}-all-projects.pdf`);
-  }
-
-  function exportGlobalSupplierExcel() {
-    const supplier = currentGlobalSupplier;
-    if (!supplier) return;
-    const wb = XLSX.utils.book_new();
-    const rows = [];
-    supplier.projects.forEach(({ project: p, entry: s }) => {
-      const payments = s.payments || [];
-      if (!payments.length) {
-        rows.push({ 'المشروع': p.name, 'النوع': s.category||'', 'الإجمالي': Number(s.total||0), 'المدفوع': 0, 'المتبقي له': Number(s.total||0), 'تاريخ الدفعة': '', 'مبلغ الدفعة': '', 'بواسطة': '' });
-      } else {
-        payments.forEach(pm => {
-          const paidTotal = payments.reduce((s2, x) => s2 + Number(x.amount), 0);
-          rows.push({ 'المشروع': p.name, 'النوع': s.category||'', 'الإجمالي': Number(s.total||0), 'المدفوع': paidTotal, 'المتبقي له': Math.max(0, Number(s.total||0) - paidTotal), 'تاريخ الدفعة': pm.date, 'مبلغ الدفعة': Number(pm.amount), 'بواسطة': pm.by||'' });
-        });
-      }
-    });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'تعاملات المورد');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(exportInfoSheet()), 'معلومات');
-    XLSX.writeFile(wb, `supplier-${supplier.name}.xlsx`);
   }
 
   // ===== استيراد Excel الذكي للمشروع =====
