@@ -20,6 +20,7 @@
   <link rel="apple-touch-icon" sizes="167x167" href="icon-512.png" />
   <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="artash.css" />
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -1915,7 +1916,7 @@
     if (overdueCount) body += `${overdueCount} فاتورة متأخرة عن السداد. `;
     if (dueSoonCount) body += `${dueSoonCount} فاتورة مستحقة خلال 3 أيام.`;
     try {
-      new Notification('Artash — تنبيه فواتير', { body, icon: 'icons/icon-192.png' });
+      new Notification('Artash — تنبيه فواتير', { body, icon: 'icon-512.png' });
     } catch(e) {
       console.error('Notification error:', e);
     }
@@ -4822,7 +4823,7 @@
     logActivity('invoice', 'create', `🔴 عملية كبيرة (${fmt(Number(amount))}): ${description} — بواسطة ${currentUserName}`);
     if (notificationsEnabled()) {
       try {
-        new Notification('Artash — عملية مالية كبيرة', { body: `${description}\nالمبلغ: ${fmt(Number(amount))}\nبواسطة: ${currentUserName}`, icon: 'icons/icon-192.png' });
+        new Notification('Artash — عملية مالية كبيرة', { body: `${description}\nالمبلغ: ${fmt(Number(amount))}\nبواسطة: ${currentUserName}`, icon: 'icon-512.png' });
       } catch(e) { console.error('Notification error:', e); }
     }
   }
