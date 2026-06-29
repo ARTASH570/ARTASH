@@ -595,6 +595,16 @@
         </div>
       </div>
 
+      <!-- شاشة الأجهزة -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🖥️ الأجهزة والجلسات</span>
+          <button class="btn btn-sm btn-danger" onclick="signOutAllDevices()">تسجيل خروج من كل الأجهزة</button>
+        </div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">الأجهزة التي سجّلت الدخول على هذا الحساب. يُحدَّث تلقائياً عند كل دخول جديد.</p>
+        <div id="devices-list"><div class="empty-state">جارٍ التحميل…</div></div>
+      </div>
+
       <div class="card">
         <div class="card-header">
           <span class="card-title">إدارة الموظفين</span>
@@ -1955,7 +1965,7 @@
     document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('visible');
     btn.classList.add('active');
-    if (tab === 'settings') { loadEmployeesList(); loadActivityLog(true); renderTrash(); updateNotificationSettingsUI(); loadLockedAccounts(); if (currentUserRole === 'it') runSecurityChecklist(); }
+    if (tab === 'settings') { loadEmployeesList(); loadActivityLog(true); renderTrash(); updateNotificationSettingsUI(); loadLockedAccounts(); loadDevicesList(); if (currentUserRole === 'it') runSecurityChecklist(); }
     if (tab === 'reports' && !document.getElementById('report-from-date').value) setReportRangeThisMonth();
     if (tab === 'clients') renderGlobalClients();
     if (tab === 'suppliers') renderGlobalSuppliers();
@@ -6586,6 +6596,131 @@ ${skippedDup} سجل مكرر تم تخطيه.`;
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'تعاملات المورد');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(exportInfoSheet()), 'معلومات');
     XLSX.writeFile(wb, `supplier-${supplier.name}.xlsx`);
+  }
+
+  // ===== شاشة الأجهزة =====
+  const DEVICE_LABELS = {
+    'Windows-Chrome': 'ويندوز — Chrome',
+    'Windows-Edge': 'ويندوز — Edge',
+    'Windows-Firefox': 'ويندوز — Firefox',
+    'Mac-Chrome': 'ماك — Chrome',
+    'Mac-Safari': 'ماك — Safari',
+    'Mac-Firefox': 'ماك — Firefox',
+    'iOS-Safari': 'آيفون / آيباد — Safari',
+    'Android-Chrome': 'أندرويد — Chrome',
+    'Linux-Chrome': 'لينكس — Chrome',
+    'Linux-Firefox': 'لينكس — Firefox',
+  };
+
+  function getDeviceLabel(fingerprint) {
+    return DEVICE_LABELS[fingerprint] || fingerprint || 'جهاز غير معروف';
+  }
+
+  function getDeviceIcon(fingerprint) {
+    if (!fingerprint) return '💻';
+    if (fingerprint.includes('iOS') || fingerprint.includes('Android')) return '📱';
+    if (fingerprint.includes('Mac')) return '🍎';
+    if (fingerprint.includes('Windows')) return '🪟';
+    return '💻';
+  }
+
+  async function loadDevicesList() {
+    const el = document.getElementById('devices-list');
+    if (!el) return;
+    el.innerHTML = '<div class="empty-state">جارٍ التحميل…</div>';
+    try {
+      const doc = await db.collection('users').doc(currentUser.uid).get();
+      if (!doc.exists) { el.innerHTML = '<div class="empty-state">لا توجد بيانات.</div>'; return; }
+      const data = doc.data();
+      const devices = data.knownDevices || [];
+      const lastLogin = data.lastLogin;
+      const currentFingerprint = getSimpleDeviceFingerprint();
+
+      if (!devices.length) {
+        el.innerHTML = '<div class="empty-state">لا توجد أجهزة مسجّلة بعد.</div>';
+        return;
+      }
+
+      el.innerHTML = devices.map(fp => {
+        const isCurrent = fp === currentFingerprint;
+        return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:24px;">${getDeviceIcon(fp)}</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;">${getDeviceLabel(fp)}</div>
+              ${isCurrent
+                ? `<div style="font-size:11px;color:var(--green);margin-top:2px;">✓ الجهاز الحالي${lastLogin ? ' · آخر دخول: ' + fmtDate(lastLogin.split('T')[0]) : ''}</div>`
+                : `<div style="font-size:11px;color:var(--text3);margin-top:2px;">جهاز مسجّل سابقاً</div>`}
+            </div>
+          </div>
+          ${!isCurrent ? `<button class="btn btn-sm btn-danger" onclick="removeDevice('${fp}')">إزالة</button>` : ''}
+        </div>`;
+      }).join('');
+
+      // Show all employees devices (admin/IT only)
+      if (isAdminOrIT()) {
+        el.innerHTML += `<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
+          <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:10px;">آخر دخول للموظفين</div>
+          <div id="all-employees-devices">جارٍ التحميل…</div>
+        </div>`;
+        loadAllEmployeesLastLogin();
+      }
+    } catch(e) {
+      el.innerHTML = '<div class="empty-state">تعذّر تحميل بيانات الأجهزة.</div>';
+    }
+  }
+
+  async function loadAllEmployeesLastLogin() {
+    const el = document.getElementById('all-employees-devices');
+    if (!el) return;
+    try {
+      const snap = await db.collection('users').get();
+      if (snap.empty) { el.innerHTML = '<div style="font-size:12px;color:var(--text3);">لا يوجد موظفون.</div>'; return; }
+      el.innerHTML = snap.docs.map(d => {
+        const u = d.data();
+        const lastLogin = u.lastLogin;
+        const devices = u.knownDevices || [];
+        const lastDevice = devices[devices.length - 1] || '';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
+          <div>
+            <div style="font-weight:700;">${u.name || u.email || 'غير معروف'} <span style="font-size:11px;color:var(--text3);font-weight:400;">${ROLE_LABELS[u.role] || u.role || ''}</span></div>
+            ${lastDevice ? `<div style="font-size:11px;color:var(--text3);">${getDeviceIcon(lastDevice)} ${getDeviceLabel(lastDevice)}</div>` : ''}
+          </div>
+          <div style="text-align:left;font-size:12px;color:var(--text3);">
+            ${lastLogin ? fmtDate(lastLogin.split('T')[0]) + '<br>' + new Date(lastLogin).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}) : 'لم يدخل بعد'}
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text3);">تعذّر التحميل.</div>';
+    }
+  }
+
+  async function removeDevice(fingerprint) {
+    if (!confirm(`إزالة هذا الجهاز من القائمة؟`)) return;
+    try {
+      const doc = await db.collection('users').doc(currentUser.uid).get();
+      const devices = (doc.data()?.knownDevices || []).filter(fp => fp !== fingerprint);
+      await db.collection('users').doc(currentUser.uid).update({ knownDevices: devices });
+      showToast('تم إزالة الجهاز.', 'success');
+      loadDevicesList();
+    } catch(e) {
+      showToast('تعذّر إزالة الجهاز.', 'error');
+    }
+  }
+
+  async function signOutAllDevices() {
+    if (!confirm('تسجيل الخروج من كل الأجهزة؟ ستحتاج لإعادة الدخول على كل جهاز.')) return;
+    try {
+      // Clear known devices + force reauth on next login
+      await db.collection('users').doc(currentUser.uid).update({ knownDevices: [] });
+      localStorage.removeItem('artash_last_reauth');
+      logActivity('employee', 'update', `${currentUserName} سجّل خروجاً من كل الأجهزة`);
+      showToast('تم. ستحتاج لإعادة الدخول على أجهزتك الأخرى.', 'success');
+      loadDevicesList();
+    } catch(e) {
+      showToast('تعذّر تنفيذ العملية.', 'error');
+    }
   }
 
   document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
