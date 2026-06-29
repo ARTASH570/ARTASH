@@ -14,12 +14,11 @@
   <meta name="application-name" content="Artash" />
   <link rel="manifest" href="manifest.json" />
   <!-- iOS splash screens -->
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-192.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png" />
-  <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-192.png" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
+  <link rel="apple-touch-icon" href="icon-512.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="icon-512.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-512.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="icon-512.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet" />
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1217,6 +1216,7 @@
     document.getElementById('user-display').textContent = `أهلاً، ${currentUserName}`;
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('reauth-gate-screen').classList.add('hidden');
+    document.getElementById('app').style.display = '';
     localStorage.setItem('artash_last_reauth', Date.now().toString());
     applyRolePermissions();
     if (currentUserRole !== 'it') loadMaintenanceMode();
@@ -1229,6 +1229,7 @@
 
   function showReauthGate(user) {
     document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app').style.display = 'none';
     document.getElementById('reauth-gate-screen').classList.remove('hidden');
     document.getElementById('reauth-gate-email').textContent = user.email;
     document.getElementById('reauth-gate-password').value = '';
@@ -1245,6 +1246,7 @@
       const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
       await currentUser.reauthenticateWithCredential(credential);
       localStorage.setItem('artash_last_reauth', Date.now().toString());
+      document.getElementById('app').style.display = '';
       await completeLoginFlow(currentUser);
     } catch(e) {
       errEl.textContent = e.code === 'auth/network-request-failed'
