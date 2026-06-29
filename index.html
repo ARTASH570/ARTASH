@@ -1216,7 +1216,7 @@
     document.getElementById('user-display').textContent = `أهلاً، ${currentUserName}`;
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('reauth-gate-screen').classList.add('hidden');
-    document.getElementById('app').style.display = '';
+    // app stays visible
     localStorage.setItem('artash_last_reauth', Date.now().toString());
     applyRolePermissions();
     if (currentUserRole !== 'it') loadMaintenanceMode();
@@ -1229,7 +1229,7 @@
 
   function showReauthGate(user) {
     document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('app').style.display = 'none';
+    // app stays visible
     document.getElementById('reauth-gate-screen').classList.remove('hidden');
     document.getElementById('reauth-gate-email').textContent = user.email;
     document.getElementById('reauth-gate-password').value = '';
@@ -1246,7 +1246,7 @@
       const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
       await currentUser.reauthenticateWithCredential(credential);
       localStorage.setItem('artash_last_reauth', Date.now().toString());
-      document.getElementById('app').style.display = '';
+      // app stays visible
       await completeLoginFlow(currentUser);
     } catch(e) {
       errEl.textContent = e.code === 'auth/network-request-failed'
@@ -1833,7 +1833,7 @@
   }
 
   function showMaintenanceScreen() {
-    document.getElementById('app').style.display = 'none';
+    // app stays visible
     const screen = document.createElement('div');
     screen.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:40px;background:var(--bg);';
     screen.innerHTML = `
