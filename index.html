@@ -1196,14 +1196,19 @@
   });
 
   async function completeLoginFlow(user) {
-    // Get user profile (name, role, assignedProjects) from Firestore users collection
+    // Get user profile (name, role, assignedProjects, knownDevices) from Firestore in
+    // a SINGLE read. Previously this document was fetched twice in a row (once here,
+    // once again in recordLoginAndCheckDevice) — two sequential network round-trips
+    // that directly slowed down every login. Now it's fetched once and the result is
+    // reused for both purposes.
+    let userDocData = null;
     try {
       const doc = await db.collection('users').doc(user.uid).get();
       if (doc.exists) {
-        const d = doc.data();
-        currentUserName = d.name || user.email;
-        currentUserRole = (d.role || 'accountant').trim().toLowerCase();
-        currentUserProjects = readAssignedProjects(d);
+        userDocData = doc.data();
+        currentUserName = userDocData.name || user.email;
+        currentUserRole = (userDocData.role || 'accountant').trim().toLowerCase();
+        currentUserProjects = readAssignedProjects(userDocData);
       } else {
         currentUserName = user.email;
         currentUserRole = 'accountant';
@@ -1217,12 +1222,13 @@
     document.getElementById('user-display').textContent = `أهلاً، ${currentUserName}`;
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('reauth-gate-screen').classList.add('hidden');
-    // app stays visible
     localStorage.setItem('artash_last_reauth', Date.now().toString());
     applyRolePermissions();
     if (currentUserRole !== 'it') loadMaintenanceMode();
     setupSync();
-    recordLoginAndCheckDevice(user.uid);
+    // Device tracking reuses the profile doc we already fetched above instead of
+    // re-reading it — this no longer blocks the UI either (fire-and-forget).
+    recordLoginAndCheckDevice(user.uid, userDocData);
     resetInactivityTimer();
   }
 
@@ -1230,7 +1236,6 @@
 
   function showReauthGate(user) {
     document.getElementById('login-screen').classList.add('hidden');
-    // app stays visible
     document.getElementById('reauth-gate-screen').classList.remove('hidden');
     document.getElementById('reauth-gate-email').textContent = user.email;
     document.getElementById('reauth-gate-password').value = '';
@@ -1247,7 +1252,6 @@
       const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
       await currentUser.reauthenticateWithCredential(credential);
       localStorage.setItem('artash_last_reauth', Date.now().toString());
-      // app stays visible
       await completeLoginFlow(currentUser);
     } catch(e) {
       errEl.textContent = e.code === 'auth/network-request-failed'
@@ -1516,12 +1520,13 @@
     return `${platform}-${browser}`;
   }
 
-  async function recordLoginAndCheckDevice(uid) {
+  // existingUserDoc: the user's profile data, already fetched once by completeLoginFlow.
+  // Passing it in avoids a second network read of the same document on every login.
+  async function recordLoginAndCheckDevice(uid, existingUserDoc) {
     try {
       const fingerprint = getSimpleDeviceFingerprint();
       const userRef = db.collection('users').doc(uid);
-      const doc = await userRef.get();
-      const knownDevices = (doc.exists && Array.isArray(doc.data().knownDevices)) ? doc.data().knownDevices : [];
+      const knownDevices = Array.isArray(existingUserDoc?.knownDevices) ? existingUserDoc.knownDevices : [];
       const isNewDevice = knownDevices.length > 0 && !knownDevices.includes(fingerprint);
 
       const updatedDevices = knownDevices.includes(fingerprint) ? knownDevices : [...knownDevices, fingerprint].slice(-5);
@@ -1834,7 +1839,8 @@
   }
 
   function showMaintenanceScreen() {
-    // app stays visible
+    // Appends a full-screen overlay on top of the (still-mounted) app, rather than
+    // hiding the app itself — simpler than fighting the existing tab/section visibility logic.
     const screen = document.createElement('div');
     screen.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:40px;background:var(--bg);';
     screen.innerHTML = `
